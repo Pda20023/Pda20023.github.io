@@ -1,0 +1,195 @@
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://gftruj.github.io/webzamples/aframe/controls/oculus-thumbstick-controls.js"></script>
+    <script>
+      var ghosts = 25, coords;
+
+      // Συνάρτηση τερματισμού παιχνιδιού (Νίκη ή Ήττα)
+      function toggle(t, s) {
+        document.querySelector('a-scene').setAttribute('fog', 'far: 1');
+        document.getElementById("txt").setAttribute('text', 'value: ' + t);
+        setTimeout(function () {
+          document.getElementById('cam1').setAttribute('active', 'false');
+          document.getElementById('cam2').setAttribute('active', 'true');
+        }, 3000);
+        setTimeout(function () {
+          document.getElementById("txt").setAttribute('position', '0 0 -1');
+          document.querySelector('a-scene').setAttribute('fog', 'near: 2');
+        }, 6000);
+        document.getElementById('player').setAttribute('src', s);
+        document.getElementById('player').components.sound.playSound();
+      }
+
+      // Component ελέγχου συγκρούσεων με κτίρια και αστυνομία
+      AFRAME.registerComponent('colliding', {
+        init: function () {
+          coords = document.getElementById('cam1');
+          document.querySelector('a-scene').addEventListener('enter-vr', function () { coords = document.getElementById('rig'); });
+          document.querySelector('a-scene').addEventListener('exit-vr', function () { coords = document.getElementById('cam1'); });
+        },
+        tick: function () {
+          var pos1 = coords.getAttribute('position');
+          var pos2 = this.el.getAttribute('position');
+          // Σύγκρουση με κτίριο
+          if (Math.abs(pos1.x - pos2.x) < 40 && Math.abs(pos1.z - pos2.z) < 40) {
+            toggle('GAME OVER', '#explode');
+          }
+          // Έλεγχος εντοπισμού από περιπολικό
+          var rot = document.getElementById('spacecraft').getAttribute('rotation');
+          var distance = Math.sqrt(pos1.x * pos1.x + pos1.z * pos1.z);
+          var angle = Math.atan2(pos1.x, pos1.z) * 180 / Math.PI;
+          if (angle < 0) angle = 360 + angle;
+          if ((Math.abs(rot.y - angle) < 30 || Math.abs(rot.y - angle) > 345) && distance > 5 && distance < 250) {
+            toggle('GAME OVER', '#police');
+          }
+        }
+      });
+
+      // Component για την κίνηση και εξολόθρευση των φαντασμάτων
+      AFRAME.registerComponent('ghosting', {
+        init: function () {
+          this.el.addEventListener('mouseenter', function () {
+            document.getElementById('shot').components.sound.playSound();
+            document.getElementById('laser').setAttribute('line', 'start: 0 -0.01 0; end: 0 0 -1; color: lime');
+          });
+          this.el.addEventListener('mouseleave', function () {
+            document.getElementById('laser').removeAttribute('line');
+            if (ghosts <= 0) toggle('WELL DONE', '#scream');
+            this.remove();
+            ghosts--;
+          }.bind(this));
+        },
+        tick: function () {
+          if (Math.random() < 0.99) return;
+          var x = Math.random() * 700 - 350;
+          var y = Math.random() * 50 + 10;
+          var z = Math.random() * 700 - 350;
+          this.el.setAttribute('animation', 'property: position; to: ' + x + ' ' + y + ' ' + z);
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <a-scene id="s1" background="color:#0d0928" fog="far: 300" shadow="type: pcfsoft">
+      <a-assets>
+        <a-asset-item id="tree" src="tree.glb"></a-asset-item>
+        <a-asset-item id="ghost" src="ghost.gltf"></a-asset-item>
+        <a-asset-item id="craft" src="spacecraft.glb"></a-asset-item>
+        <img id="stars" src="eso0932a.jpg">
+        <img id="earth" src="flat_earth03.jpg">
+        <img id="b1" src="b1.png">
+        <img id="b2" src="b2.png">
+        <img id="b3" src="b3.png">
+        <img id="b4" src="b4.png">
+        <img id="b5" src="b5.png">
+        <img id="b6" src="b6.png">
+        <audio id="gun" src="mixkit-short-laser-gun-shot-1670.wav"></audio>
+        <audio id="explode" src="mixkit-explosion-in-battle-2809.wav"></audio>
+        <audio id="police" src="mixkit-police-siren-us-1643.wav"></audio>
+        <img id="scream" src="mixkit-battle-man-scream-2175.wav">
+      </a-assets>
+
+      <!-- Ουρανός και Πλανήτης Γη -->
+      <a-sky radius="5000" src="#stars" animation="property: rotation; to: 0 360 -30; dur: 20000"></a-sky>
+      <a-sphere radius="1000" src="#earth" animation="property: rotation; to: 360 -360 0; dur: 30000"></a-sphere>
+      <a-ring color="black" radius-inner="0" radius-outer="990" rotation="-90 0 0"></a-ring>
+
+      <!-- Κάμερα Παίκτη (Rig) -->
+      <a-entity id="rig" position="0 -20 4900" animation="property: position; to: 0 10 0; dur: 30000; easing: easeInOutQuad">
+        <a-camera id="cam1" wasd-controls="acceleration: 500">
+          <a-cursor color="lime" animation="property: visible; to: true; dur: 30000"></a-cursor>
+          <a-entity id="laser"></a-entity>
+          <a-sound id="shot" src="#gun"></a-sound>
+          <a-sound id="player"></a-sound>
+        </a-camera>
+        <a-entity oculus-touch-controls="hand: right" oculus-thumbstick-controls="acceleration: 500"></a-entity>
+      </a-entity>
+
+      <a-light intensity="0.025" type="ambient"></a-light>
+      <a-light intensity="0.05" position="0 1 1"></a-light>
+
+      <!-- Περιπολικό Σκάφος με Κάμερα (cam2) -->
+      <a-entity id="spacecraft" gltf-model="#craft" scale="10 10 10"
+                animation="property: position; from: 0 6 8; to: 0 -7 8; dur: 21000; dir: alternate; loop: true"
+                animation__rot="property: rotation; from: 0 0 0; to: 0 360 0; dur: 39000; dir: alternate; loop: true">
+        <a-entity light="type: spot; penumbra: 0.5; distance: 200; castShadow: true" position="0 -1 -5" rotation="-180 0 0"></a-entity>
+        <a-camera id="cam2" position="0 3 6" wasd-controls="enabled: false" look-controls="enabled: false" active="false">
+          <a-entity text="font: https://cdn.aframe.io/fonts/mozillavr.fnt" id="txt" position="0 0 -1"></a-entity>
+        </a-camera>
+      </a-entity>
+
+      <!-- Πρότυπο Πεζοδρομίου (Κρυφό) -->
+      <a-box id="pavement" color="#333" width="80" height="0.5" depth="80" visible="false">
+        <a-entity gltf-model="#tree" position="-35 0 25"></a-entity>
+        <a-entity gltf-model="#tree" position="-35 0 15"></a-entity>
+        <a-entity gltf-model="#tree" position="-35 0 5"></a-entity>
+        <a-entity gltf-model="#tree" position="-35 0 -5"></a-entity>
+        <a-entity gltf-model="#tree" position="-35 0 -15"></a-entity>
+        <a-entity gltf-model="#tree" position="-35 0 -25"></a-entity>
+        <a-entity gltf-model="#tree" position="-25 0 -35"></a-entity>
+        <a-entity gltf-model="#tree" position="-15 0 -35"></a-entity>
+        <a-entity gltf-model="#tree" position="-5 0 -35"></a-entity>
+        <a-entity gltf-model="#tree" position="5 0 -35"></a-entity>
+        <a-entity gltf-model="#tree" position="15 0 -35"></a-entity>
+        <a-entity gltf-model="#tree" position="25 0 -35"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 -35"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 -25"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 -15"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 -5"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 5"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 15"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 25"></a-entity>
+        <a-entity gltf-model="#tree" position="35 0 35"></a-entity>
+        <a-entity gltf-model="#tree" position="25 0 35"></a-entity>
+        <a-entity gltf-model="#tree" position="15 0 35"></a-entity>
+        <a-entity gltf-model="#tree" position="5 0 35"></a-entity>
+        <a-entity gltf-model="#tree" position="-5 0 35"></a-entity>
+        <a-entity gltf-model="#tree" position="-15 0 35"></a-entity>
+        <a-entity gltf-model="#tree" position="-25 0 35"></a-entity>
+        <a-entity gltf-model="#tree" position="-35 0 35"></a-entity>
+      </a-box>
+    </a-scene>
+
+    <!-- Δημιουργία Πόλης και Φαντασμάτων μέσω Script -->
+    <script>
+      var scene1 = document.querySelector('a-scene');
+      
+      // Χτίσιμο Οικοδομικών Τετραγώνων και Κτιρίων
+      for (var i = -350; i < 350; i += 100) {
+        for (var j = -350; j <= 350; j += 100) {
+          if (Math.abs(i) < 200 && Math.abs(j) < 200) continue;
+          var p = document.getElementById('pavement').cloneNode(true);
+          p.setAttribute('position', i + ' 0.25 ' + j);
+          p.setAttribute('visible', 'true');
+          scene1.appendChild(p);
+
+          var box = document.createElement('a-box');
+          var h = Math.ceil(Math.random() * 6);
+          box.setAttribute('src', '#b' + h);
+          box.setAttribute('repeat', '1 ' + Math.ceil(h / 2));
+          box.setAttribute('scale', '30 ' + (30 * (h + 1)) + ' 30');
+          box.setAttribute('position', i + ' ' + (15 * (h + 1) + 0.5) + ' ' + j);
+          box.setAttribute('shadow', '');
+          box.setAttribute('colliding', '');
+          scene1.appendChild(box);
+        }
+      }
+
+      // Δημιουργία Φαντασμάτων στην Πόλη
+      for (var i = 0; i < ghosts; i++) {
+        var ghost = document.createElement('a-entity');
+        var x = Math.random() * 700 - 350;
+        var y = Math.random() * 50 + 10;
+        var z = Math.random() * 700 - 350;
+        ghost.setAttribute('gltf-model', '#ghost');
+        ghost.setAttribute('position', x + ' ' + y + ' ' + z);
+        ghost.setAttribute('rotation', '0 ' + Math.random() * 360 + ' 0');
+        ghost.setAttribute('scale', '100 100 100');
+        ghost.setAttribute('ghosting', '');
+        scene1.appendChild(ghost);
+      }
+    </script>
+  </body>
+</html>
