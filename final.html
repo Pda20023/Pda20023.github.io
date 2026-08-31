@@ -1,0 +1,113 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Sci-Fi Escape - Final Project</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://c-frame.github.io/aframe-physics-system/dist/aframe-physics-system.js"></script>
+    
+    <script>
+      // Μεταβλητές σεναρίου
+      var locked = true, oxygenLeak = true, message = "", oxygenTime = 6000;
+      
+      // Σύστημα ελέγχου οξυγόνου και ορίων
+      AFRAME.registerComponent('station-logic', {
+        tick: function () {
+          if (oxygenLeak) oxygenTime--;
+          if (oxygenTime <= 0) message = "CRITICAL: OXYGEN DEPLETED - GAME OVER";
+          
+          if (message != "") {
+            this.el.setAttribute('value', message);
+          } else {
+            this.el.setAttribute('value', 'OXYGEN: ' + Math.round(oxygenTime / 100) + '%');
+          }
+          
+          var pos = document.getElementById('cam').getAttribute('position');
+          if (pos.x < -14) pos.x = -14;
+          if (pos.x > 14) pos.x = 14;
+          if (pos.z < -14) pos.z = -14;
+          if (pos.z > 14) pos.z = 14;
+          document.getElementById('cam').setAttribute('position', pos);
+        }
+      });
+
+      // Σύστημα αλληλεπίδρασης
+      AFRAME.registerComponent('interaction', {
+        init: function () {
+          var el = this.el;
+          el.addEventListener('mouseenter', function () {
+            var pos = document.getElementById('cam').getAttribute('position');
+            
+            // Έλεγχος Πόρτας
+            if (el.id == "exit-door") {
+              if (!locked && oxygenTime > 0) {
+                message = "MISSION SUCCESS: ESCAPED!";
+                // Η πόρτα ανοίγει προς τα πάνω
+                el.setAttribute('animation', 'property: position; to: 0 10 -14.8; dur: 2000');
+              } else {
+                message = "DOOR UNPOWERED! FIND THE LIGHTNING CORE.";
+              }
+              return;
+            } 
+            
+            // Έλξη αντικειμένων προς τον παίκτη
+            el.removeAttribute('dynamic-body');
+            el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z + '; dur: 1000');
+            
+            // Λογική για τη Σφαίρα (Sphere)
+            if (el.id == "sphere") {
+              oxygenLeak = false; 
+              message = "ENERGY SPHERE SECURED! OXYGEN STABLE.";
+              document.getElementById('emergency-light').setAttribute('visible', 'true');
+            }
+            // Λογική για τον Κεραυνό (Lightning)
+            else if (el.id == "lightning") {
+              locked = false; 
+              message = "LIGHTNING CORE ACQUIRED! DOOR POWERED.";
+            }
+            
+            setTimeout(function () { el.remove(); }, 2000);
+          });
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Σκηνή με εφέ κόκκινου συναγερμού -->
+    <a-scene id="s1" physics fog="color: #2b0000; near: 1; far: 25">
+      
+      <!-- Φόρτωση των δικών σου 3Δ Μοντέλων -->
+      <a-assets>
+        <a-asset-item id="sphere-model" src="sphere.glb"></a-asset-item>
+        <a-asset-item id="lightning-model" src="lightning.glb"></a-asset-item>
+      </a-assets>
+
+      <a-light type="ambient" intensity="0.2" color="red"></a-light>
+      <a-light type="directional" intensity="0.5" position="0 10 0" color="orange"></a-light>
+
+      <!-- Δωμάτιο -->
+      <a-plane static-body width="30" height="10" position="-15 5 0" rotation="0 90 0" color="#111"></a-plane>
+      <a-plane static-body width="30" height="10" position="15 5 0" rotation="0 -90 0" color="#111"></a-plane>
+      <a-plane static-body width="30" height="10" position="0 5 15" material="side: back" color="#111"></a-plane>
+      <a-plane static-body width="30" height="10" position="0 5 -15" color="#111"></a-plane>
+      <a-plane static-body width="30" height="30" position="0 0 0" rotation="-90 0 0" color="#222"></a-plane>
+      <a-plane static-body width="30" height="30" position="0 10 0" rotation="90 0 0" color="#1a1a1a"></a-plane>
+
+      <!-- Κεντρική Πύλη Διαφυγής -->
+      <a-box id="exit-door" width="4" height="6" depth="0.5" position="0 3 -14.8" color="darkblue" interaction>
+        <a-ring color="cyan" radius-inner="0.2" radius-outer="0.4" position="0 0 0.3"></a-ring>
+      </a-box>
+
+      <!-- Κάμερα (Παίκτης) -->
+      <a-camera id="cam" position="0 2 10">
+        <a-text station-logic value="" align="center" width="8" position="0 1.5 -2" color="red"></a-text>
+        <a-cursor color="yellow" fuse="true" far="10"></a-cursor>
+        <a-light id="emergency-light" type="point" intensity="1.5" distance="15" color="cyan" visible="false" position="0 0 0"></a-light>
+      </a-camera>
+
+      <!-- Τα δικά σου 3Δ Αντικείμενα -->
+      <a-entity dynamic-body id="sphere" gltf-model="#sphere-model" scale="1 1 1" position="-5 1 -5" interaction></a-entity>
+      <a-entity dynamic-body id="lightning" gltf-model="#lightning-model" scale="1 1 1" position="5 1 -8" interaction></a-entity>
+
+    </a-scene>
+  </body>
+</html>
