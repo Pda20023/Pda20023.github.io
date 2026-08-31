@@ -1,0 +1,156 @@
+<html>
+  <head>
+    <!-- Εισαγωγή A-Frame και Μηχανής Φυσικής -->
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://c-frame.github.io/aframe-physics-system/dist/aframe-physics-system.js"></script>
+    
+    <!-- Συστατικό (Component) για Χρονόμετρο, Διαρροή αερίου και Όρια Δωματίου -->
+    <script>
+      var locked = true, tool = false, gas = true, message = "", time = 5000;
+      
+      AFRAME.registerComponent('updating', {
+        tick: function () {
+          if (gas) time--;
+          if (time <= 0) message = "Game over...";
+          if (message != "") this.el.setAttribute('value', message);
+          else this.el.setAttribute('value', 'Time: ' + Math.round(time / 100));
+          
+          var pos = document.getElementById('cam').getAttribute('position');
+          // Περιορισμοί για να μην βγαίνει ο παίκτης έξω από τους τοίχους
+          if (pos.x < -19) pos.x = -19;
+          if (pos.x > 19) pos.x = 19;
+          if (pos.z < -19) pos.z = -19;
+          if (pos.z > 19) pos.z = 19;
+          document.getElementById('cam').setAttribute('position', pos);
+        }
+      });
+
+      // Συστατικό (Component) για την αλληλεπίδραση με τα αντικείμενα
+      AFRAME.registerComponent('focusing', {
+        init: function () {
+          var el = this.el;
+          el.addEventListener('mouseenter', function () {
+            var pos = document.getElementById('cam').getAttribute('position');
+            
+            // Αλληλεπίδραση με Πόρτα
+            if (el.id == "door") {
+              if (!locked && time >= 0) { 
+                el.components.sound.playSound(); 
+                message = "Well done!"; 
+              }
+              return;
+            } 
+            // Αλληλεπίδραση με Παράθυρο
+            else if (el.id == "window") {
+              if (tool) {
+                document.querySelector('a-scene').removeAttribute('animation');
+                document.querySelector('a-scene').setAttribute('animation', 'property: fog.far; to: 1000; dur: 50000');
+                gas = false;
+                el.components.sound.playSound(); 
+                el.setAttribute('blending', 'subtractive');
+              }
+              return;
+            }
+            
+            // Για Σφυρί, Κλειδί, Φακό - Έρχονται προς τον παίκτη
+            el.removeAttribute('dynamic-body');
+            el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z);
+            
+            if (el.id == "torch") document.getElementById('light').setAttribute('animation', 'property: visible; to: true');
+            else if (el.id == "key") locked = false;
+            else if (el.id == "hammer") tool = true;
+            
+            setTimeout(function () { el.remove(); }, 3000);
+          });
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Σκηνή με Ομίχλη (αέριο) που πυκνώνει -->
+    <a-scene id="s1" physics fog="color: silver; near: 0" animation="property: fog.far; to: 5; dur: 50000; easing: easeOutQuad">
+      
+      <!-- Τοίχοι, Πάτωμα, Οροφή (6 Επίπεδα) -->
+      <a-plane static-body width="40" height="8" position="-20 4 0" rotation="0 90 0">
+        <!-- Παράθυρο -->
+        <a-box id="window" color="silver" opacity="0.5" scale="1.25 1.25 0.5" position="-15 2 -0.2" sound="src: url(mixkit-glass-break-with-hammer-thud-759.wav)" focusing>
+          <a-light distance="1" type="spot" position="0 0 1"></a-light>
+          <a-light angle="90" intensity="0.01" type="spot" position="0 0 -1" rotation="180 0 0"></a-light>
+        </a-box>
+      </a-plane>
+      <a-plane static-body width="40" height="8" position="20 4 0" rotation="0 -90 0"></a-plane>
+      <a-plane static-body width="40" height="8" position="0 4 20" material="side: back"></a-plane>
+      <a-plane static-body width="40" height="8" position="0 4 -20"></a-plane>
+      <a-plane static-body width="40" height="40" position="0 0 0" rotation="-90 0 0"></a-plane>
+      <a-plane static-body width="40" height="40" position="0 8 0" rotation="90 0 0"></a-plane>
+      
+      <!-- Πόρτα -->
+      <a-plane id="door" height="4" width="2" color="darkgreen" position="0 2 -19.9" sound="src: url(mixkit-locking-a-shop-door-with-keys-202.wav)" focusing>
+        <a-ring color="black" radius-inner="0.01" radius-outer="0.1" position="0.75 0 0.01"></a-ring>
+      </a-plane>
+
+      <!-- Κάμερα (Παίκτης) -->
+      <a-camera id="cam">
+        <a-text updating value="" align="center" geometry="primitive: plane; width: 6; height: 1" position="0 0.5 -1" material="opacity: 0"></a-text>
+        <a-cone static-body height="2" position="0 1 0"></a-cone>
+        <a-cursor color="yellow" fuse="true" far="10"></a-cursor>
+        <a-light id="light" distance="20" intensity="0.25" type="spot" penumbra="0.5" visible="false"></a-light>
+      </a-camera>
+
+      <!-- Σύνθετα Αντικείμενα (Σφυρί, Κλειδί, Φακός, Πρωτότυπο Τραπέζι, Πρωτότυπη Καρέκλα) -->
+      <a-cylinder dynamic-body id="hammer" color="tan" height="0.5" radius="0.05" focusing>
+        <a-box color="black" width="0.5" height="0.1" depth="0.1" position="0 0.25 0"></a-box>
+      </a-cylinder>
+      
+      <a-cylinder dynamic-body id="key" color="silver" height="0.15" radius="0.01" focusing>
+        <a-box color="silver" scale="0.04 0.03 0.02" position="0.02 0.04 0"></a-box>
+        <a-torus color="silver" radius="0.03" radius-tubular="0.003" position="0 -0.1 0"></a-torus>
+      </a-cylinder>
+
+      <a-cylinder dynamic-body id="torch" height="0.5" radius="0.1" rotation="90 0 0" focusing>
+        <a-cone height="0.2" radius-top="0.1" radius-bottom="0.2" position="0 0.2 0" rotation="180 0 0"></a-cone>
+        <a-light distance="20" intensity="0.25" type="spot" penumbra="0.5" position="0 0.2 0" rotation="90 0 0"></a-light>
+        <a-light distance="0.3" type="spot" position="0 0.4 0" rotation="-90 0 0"></a-light>
+      </a-cylinder>
+
+      <a-box dynamic-body id="table" color="brown" scale="3 0.2 3" position="-10 2 -10">
+        <a-cylinder height="6" radius="0.03" position="-0.4 -3 -0.4"></a-cylinder>
+        <a-cylinder height="6" radius="0.03" position="-0.4 -3 0.4"></a-cylinder>
+        <a-cylinder height="6" radius="0.03" position="0.4 -3 -0.4"></a-cylinder>
+        <a-cylinder height="6" radius="0.03" position="0.4 -3 0.4"></a-cylinder>
+      </a-box>
+
+      <a-box dynamic-body id="chair" color="brown" scale="1 0.1 1" position="10 1.5 10">
+        <a-cylinder height="8" radius="0.05" position="-0.4 -4 -0.4"></a-cylinder>
+        <a-cylinder height="8" radius="0.05" position="-0.4 -4 0.4"></a-cylinder>
+        <a-cylinder height="19" radius="0.05" position="0.4 2 -0.4"></a-cylinder>
+        <a-cylinder height="19" radius="0.05" position="0.4 2 0.4"></a-cylinder>
+        <a-box color="silver" scale="0.05 5 1" position="0.4 8 0"></a-box>
+      </a-box>
+    </a-scene>
+
+    <!-- Τοποθέτηση τραπεζιών, καρεκλών και εργαλείων σε τυχαίες θέσεις -->
+    <script>
+      var scene1 = document.getElementById('s1');
+      for (var i = 0; i < 10; i++) {
+        var t = document.getElementById('table').cloneNode(true);
+        var x = Math.random() * 40 - 20;
+        var z = Math.random() * 40 - 20;
+        t.setAttribute('position', x + ' 2 ' + z);
+        t.setAttribute('rotation', '0 ' + Math.random() * 90 + ' 0');
+        scene1.appendChild(t);
+      }
+      for (var i = 0; i < 20; i++) {
+        var c = document.getElementById('chair').cloneNode(true);
+        var x = Math.random() * 40 - 20;
+        var z = Math.random() * 40 - 20;
+        c.setAttribute('position', x + ' 6 ' + z);
+        scene1.appendChild(c);
+      }
+      
+      document.getElementById('hammer').setAttribute('position', (Math.random() * 30 - 15) + ' 5 ' + (Math.random() * 30 - 15));
+      document.getElementById('torch').setAttribute('position', (Math.random() * 30 - 15) + ' 3 ' + (Math.random() * 30 - 15));
+      document.getElementById('key').setAttribute('position', (Math.random() * 30 - 15) + ' 1 ' + (Math.random() * 30 - 15));
+    </script>
+  </body>
+</html>
