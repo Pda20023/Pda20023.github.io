@@ -1,0 +1,55 @@
+<html>
+  <head>
+    <!-- Εισαγωγή A-Frame και Μηχανής Φυσικής -->
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
+    
+    <!-- Συστατικό για την αλληλεπίδραση με το ποντίκι -->
+    <script>
+      AFRAME.registerComponent('removing', {
+        init: function () {
+          var el = this.el;
+          el.addEventListener('mouseenter', function () { el.setAttribute('color', 'red'); });
+          el.addEventListener('mouseleave', function () { el.setAttribute('color', 'firebrick'); });
+          el.addEventListener('click', function () { el.remove(); });
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Σκηνή με Φυσική και Κέρσορα -->
+    <a-scene id="s1" background="color: cadetblue" physics cursor="rayOrigin: mouse">
+      
+      <!-- Στατικό Έδαφος -->
+      <a-plane static-body height="100" width="100" rotation="-90 0 0"></a-plane>
+
+      <!-- Κάμερα και Avatar παίκτη (για να σπρώχνει τα τούβλα) -->
+      <a-entity camera look-controls wasd-controls position="0 1.6 0">
+        <a-cursor fuse="true" fuse-timeout="5000"></a-cursor>
+        <a-sphere static-body position="0 -1 -1" scale="0.5 0.5 0.5" color="gray"></a-sphere>
+        <a-sphere static-body position="0 -0.25 -1" scale="0.25 0.25 0.25" color="black"></a-sphere>
+      </a-entity>
+      
+    </a-scene>
+
+    <!-- Χτίσιμο του πύργου Τζένγκα με βρόχους (Loops) -->
+    <script>
+      var scene1 = document.getElementById('s1');
+      for (var i = 0; i < 9; i++) {
+        var e = i % 2, o = !e;
+        for (var j = 0; j < 5; j++) {
+          var box = document.createElement('a-box');
+          
+          box.setAttribute('dynamic-body', 'angularDamping: 1');
+          box.setAttribute('position', e * (j - 2) + ' ' + (i + 0.5) + ' ' + (-12 - (j - 2) * o));
+          box.setAttribute('color', 'firebrick');
+          box.setAttribute('scale', (4 * o + 1) + ' 1 ' + (4 * e + 1));
+          
+          box.setAttribute('removing', '');
+          
+          scene1.appendChild(box);
+        }
+      }
+    </script>
+  </body>
+</html>
