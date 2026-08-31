@@ -44,7 +44,7 @@
                 // Η πόρτα ανοίγει προς τα πάνω
                 el.setAttribute('animation', 'property: position; to: 0 10 -14.8; dur: 2000');
               } else {
-                message = "DOOR UNPOWERED! FIND THE LIGHTNING CORE.";
+                message = "DOOR UNPOWERED! FIND THE ENERGY CRYSTAL.";
               }
               return;
             } 
@@ -53,16 +53,16 @@
             el.removeAttribute('dynamic-body');
             el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z + '; dur: 1000');
             
-            // Λογική για τη Σφαίρα (Sphere)
+            // Λογική για τη Σφαίρα (Sphere) - Το 3D μοντέλο
             if (el.id == "sphere") {
               oxygenLeak = false; 
               message = "ENERGY SPHERE SECURED! OXYGEN STABLE.";
               document.getElementById('emergency-light').setAttribute('visible', 'true');
             }
-            // Λογική για τον Κεραυνό (Lightning)
+            // Λογική για τον Κρύσταλλο - Το αντικείμενο από κώδικα
             else if (el.id == "lightning") {
               locked = false; 
-              message = "LIGHTNING CORE ACQUIRED! DOOR POWERED.";
+              message = "CRYSTAL CORE ACQUIRED! DOOR POWERED.";
             }
             
             setTimeout(function () { el.remove(); }, 2000);
@@ -75,10 +75,9 @@
     <!-- Σκηνή με εφέ κόκκινου συναγερμού -->
     <a-scene id="s1" physics fog="color: #2b0000; near: 1; far: 25">
       
-      <!-- Φόρτωση των δικών σου 3Δ Μοντέλων -->
+      <!-- Φόρτωση του 3Δ Μοντέλου της Σφαίρας μόνο -->
       <a-assets>
         <a-asset-item id="sphere-model" src="sphere.glb"></a-asset-item>
-        <a-asset-item id="lightning-model" src="lightning.glb"></a-asset-item>
       </a-assets>
 
       <a-light type="ambient" intensity="0.2" color="red"></a-light>
@@ -104,9 +103,11 @@
         <a-light id="emergency-light" type="point" intensity="1.5" distance="15" color="cyan" visible="false" position="0 0 0"></a-light>
       </a-camera>
 
-      <!-- Τα δικά σου 3Δ Αντικείμενα -->
+      <!-- Το 3Δ Αντικείμενο που βρήκες (Σφαίρα) -->
       <a-entity dynamic-body id="sphere" gltf-model="#sphere-model" scale="1 1 1" position="-5 1 -5" interaction></a-entity>
-      <a-entity dynamic-body id="lightning" gltf-model="#lightning-model" scale="1 1 1" position="5 1 -8" interaction></a-entity>
+
+      <!-- Ο Ενεργειακός Κρύσταλλος (που φτιάξαμε με κώδικα) -->
+      <a-octahedron dynamic-body id="lightning" color="#00ffff" radius="0.4" position="5 1 -8" interaction animation="property: rotation; to: 0 360 0; loop: true; dur: 3000"></a-octahedron>
 
     </a-scene>
   </body>
