@@ -1,15 +1,16 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sci-Fi Escape - Final Project</title>
+    <title>Sci-Fi Escape - Final Project (Enhanced)</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://c-frame.github.io/aframe-physics-system/dist/aframe-physics-system.js"></script>
+    <!-- Φορτώνουμε το σύστημα σωματιδίων (particles) για τα εφέ -->
+    <script src="https://unpkg.com/aframe-spe-particles-component@^1.0.4/dist/aframe-spe-particles-component.min.js"></script>
     
     <script>
       // Μεταβλητές σεναρίου
-      var locked = true, oxygenLeak = true, message = "", oxygenTime = 6000;
+      var locked = true, oxygenLeak = true, message = "WARNING: OXYGEN DEPLETING. FIND THE ENERGY SPHERE.", oxygenTime = 6000;
       
-      // Σύστημα ελέγχου οξυγόνου και ορίων
       AFRAME.registerComponent('station-logic', {
         tick: function () {
           if (oxygenLeak) oxygenTime--;
@@ -18,7 +19,7 @@
           if (message != "") {
             this.el.setAttribute('value', message);
           } else {
-            this.el.setAttribute('value', 'OXYGEN: ' + Math.round(oxygenTime / 100) + '%');
+            this.el.setAttribute('value', 'OXYGEN LEVEL: STABLE');
           }
           
           var pos = document.getElementById('cam').getAttribute('position');
@@ -30,84 +31,145 @@
         }
       });
 
-      // Σύστημα αλληλεπίδρασης
       AFRAME.registerComponent('interaction', {
         init: function () {
           var el = this.el;
           el.addEventListener('mouseenter', function () {
             var pos = document.getElementById('cam').getAttribute('position');
             
-            // Έλεγχος Πόρτας
+            // 1. Έλεγχος Πόρτας
             if (el.id == "exit-door") {
-              if (!locked && oxygenTime > 0) {
-                message = "MISSION SUCCESS: ESCAPED!";
-                // Η πόρτα ανοίγει προς τα πάνω
-                el.setAttribute('animation', 'property: position; to: 0 10 -14.8; dur: 2000');
+              if (!locked && !oxygenLeak) {
+                message = "AIRLOCK OPEN. ESCAPE SUCCESSFUL!";
+                // Η πόρτα βυθίζεται στο πάτωμα (cinematic)
+                el.setAttribute('animation', 'property: position; to: 0 -6 -14.8; dur: 3000');
+                
+                // ΚΑΘΑΡΙΖΕΙ Η ΟΜΙΧΛΗ - ΑΠΟΚΑΛΥΠΤΕΤΑΙ ΤΟ ΔΙΑΣΤΗΜΑ
+                document.querySelector('a-scene').setAttribute('animation__fog', 'property: fog.far; to: 5000; dur: 3000');
+                document.querySelector('a-scene').setAttribute('fog', 'color: #000005'); // Το χρώμα του διαστήματος
+                
+              } else if (oxygenLeak) {
+                message = "DOOR LOCKED! STABILIZE OXYGEN FIRST.";
               } else {
-                message = "DOOR UNPOWERED! FIND THE ENERGY CRYSTAL.";
+                message = "DOOR UNPOWERED! INSERT CRYSTAL CORE.";
               }
               return;
             } 
             
-            // Έλξη αντικειμένων προς τον παίκτη
-            el.removeAttribute('dynamic-body');
-            el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z + '; dur: 1000');
-            
-            // Λογική για τη Σφαίρα (Sphere) - Το 3D μοντέλο
+            // 2. Λογική Σφαίρας
             if (el.id == "sphere") {
               oxygenLeak = false; 
-              message = "ENERGY SPHERE SECURED! OXYGEN STABLE.";
-              document.getElementById('emergency-light').setAttribute('visible', 'true');
+              message = "SYSTEM STABILIZED. PROCEED TO AIRLOCK.";
+              
+              // Κλείνει ο κόκκινος συναγερμός, ανάβει ο μπλε φωτισμός ανάγκης
+              document.getElementById('alarm-rig').setAttribute('visible', 'false');
+              document.getElementById('ambient-light').setAttribute('color', '#4444ff');
+              document.getElementById('ambient-light').setAttribute('intensity', '0.5');
+              
+              el.removeAttribute('dynamic-body');
+              el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z + '; dur: 1000');
+              setTimeout(function () { el.remove(); }, 1000);
+              return;
             }
-            // Λογική για τον Κρύσταλλο - Το αντικείμενο από κώδικα
-            else if (el.id == "lightning") {
+
+            // 3. Λογική Κρυστάλλου (Lightning)
+            if (el.id == "lightning") {
+              if(oxygenLeak) {
+                 message = "IT'S TOO HOT! FIX OXYGEN FIRST.";
+                 return; // Δεν σε αφήνει να το πάρεις αν δεν φτιάξεις πρώτα το οξυγόνο!
+              }
               locked = false; 
-              message = "CRYSTAL CORE ACQUIRED! DOOR POWERED.";
+              message = "CORE ACQUIRED! MAIN DOOR POWERED.";
+              
+              // Σταματούν οι σπίθες από το σύστημα σωματιδίων
+              el.removeAttribute('spe-particles');
+              
+              el.removeAttribute('dynamic-body');
+              el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z + '; dur: 1000');
+              setTimeout(function () { el.remove(); }, 1000);
+              return;
             }
-            
-            setTimeout(function () { el.remove(); }, 2000);
           });
         }
       });
     </script>
   </head>
   <body>
-    <!-- Σκηνή με εφέ κόκκινου συναγερμού -->
-    <a-scene id="s1" physics fog="color: #2b0000; near: 1; far: 25">
+    <!-- Πυκνή κόκκινη ομίχλη κινδύνου στην αρχή -->
+    <a-scene id="s1" physics fog="color: #3b0000; near: 1; far: 20" shadow="type: pcfsoft">
       
-      <!-- Φόρτωση του 3Δ Μοντέλου της Σφαίρας μόνο -->
       <a-assets>
         <a-asset-item id="sphere-model" src="sphere.glb"></a-asset-item>
+        <!-- Υφές από την εργασία 4 (αν δεν βρεθούν, θα είναι απλά μαύρο και γκρι) -->
+        <img id="stars" src="eso0932a.jpg">
+        <img id="earth" src="flat_earth03.jpg">
       </a-assets>
 
-      <a-light type="ambient" intensity="0.2" color="red"></a-light>
-      <a-light type="directional" intensity="0.5" position="0 10 0" color="orange"></a-light>
+      <!-- ΕΞΩΤΕΡΙΚΟΣ ΧΩΡΟΣ (Το Διάστημα πίσω από την πόρτα) -->
+      <a-sky radius="4000" src="#stars"></a-sky>
+      <a-sphere radius="800" src="#earth" position="0 -200 -2000" animation="property: rotation; to: 0 -360 0; loop: true; dur: 60000"></a-sphere>
 
-      <!-- Δωμάτιο -->
-      <a-plane static-body width="30" height="10" position="-15 5 0" rotation="0 90 0" color="#111"></a-plane>
-      <a-plane static-body width="30" height="10" position="15 5 0" rotation="0 -90 0" color="#111"></a-plane>
-      <a-plane static-body width="30" height="10" position="0 5 15" material="side: back" color="#111"></a-plane>
-      <a-plane static-body width="30" height="10" position="0 5 -15" color="#111"></a-plane>
+      <!-- ΦΩΤΙΣΜΟΣ -->
+      <a-light id="ambient-light" type="ambient" intensity="0.2" color="white"></a-light>
+      
+      <!-- Σύστημα περιστρεφόμενου Συναγερμού -->
+      <a-entity id="alarm-rig" position="0 9 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000">
+        <a-light type="spot" color="red" intensity="5" angle="60" position="0 0 0" rotation="-45 0 0" distance="25"></a-light>
+        <a-light type="spot" color="red" intensity="5" angle="60" position="0 0 0" rotation="-45 180 0" distance="25"></a-light>
+      </a-entity>
+
+      <!-- ΤΟ ΔΩΜΑΤΙΟ ΤΟΥ ΣΤΑΘΜΟΥ (Με πιο Sci-Fi αισθητική) -->
+      <!-- Πάτωμα με μεταλλικό γκρι και γραμμές -->
       <a-plane static-body width="30" height="30" position="0 0 0" rotation="-90 0 0" color="#222"></a-plane>
-      <a-plane static-body width="30" height="30" position="0 10 0" rotation="90 0 0" color="#1a1a1a"></a-plane>
+      <a-plane width="29.5" height="29.5" position="0 0.05 0" rotation="-90 0 0" color="#111" material="wireframe: true"></a-plane>
 
-      <!-- Κεντρική Πύλη Διαφυγής -->
-      <a-box id="exit-door" width="4" height="6" depth="0.5" position="0 3 -14.8" color="darkblue" interaction>
-        <a-ring color="cyan" radius-inner="0.2" radius-outer="0.4" position="0 0 0.3"></a-ring>
+      <!-- Τοίχοι -->
+      <a-plane static-body width="30" height="10" position="-15 5 0" rotation="0 90 0" color="#151515"></a-plane>
+      <a-plane static-body width="30" height="10" position="15 5 0" rotation="0 -90 0" color="#151515"></a-plane>
+      <a-plane static-body width="30" height="10" position="0 5 15" material="side: back" color="#151515"></a-plane>
+      <a-plane static-body width="30" height="10" position="0 5 -15" color="#151515"></a-plane>
+      <!-- Οροφή -->
+      <a-plane static-body width="30" height="30" position="0 10 0" rotation="90 0 0" color="#0a0a0a"></a-plane>
+
+      <!-- ΚΕΝΤΡΙΚΗ ΠΥΛΗ ΔΙΑΦΥΓΗΣ -->
+      <!-- Πλαίσιο πόρτας (neon green για να ξεχωρίζει) -->
+      <a-box width="5" height="7" depth="0.1" position="0 3.5 -14.9" color="#00ff00" material="wireframe: true"></a-box>
+      <!-- Η ίδια η πόρτα -->
+      <a-box id="exit-door" width="4.8" height="6.8" depth="0.2" position="0 3.4 -14.8" color="#1a2b3c" interaction>
+        <!-- Λογότυπο πόρτας -->
+        <a-circle color="cyan" radius="0.5" position="0 0 0.15" material="wireframe: true"></a-circle>
+        <a-text value="AIRLOCK" align="center" position="0 0.8 0.15" color="cyan" scale="1.5 1.5 1.5"></a-text>
       </a-box>
 
-      <!-- Κάμερα (Παίκτης) -->
-      <a-camera id="cam" position="0 2 10">
-        <a-text station-logic value="" align="center" width="8" position="0 1.5 -2" color="red"></a-text>
-        <a-cursor color="yellow" fuse="true" far="10"></a-cursor>
-        <a-light id="emergency-light" type="point" intensity="1.5" distance="15" color="cyan" visible="false" position="0 0 0"></a-light>
+      <!-- ΚΑΜΕΡΑ (ΠΑΙΚΤΗΣ) -->
+      <a-camera id="cam" position="0 2.5 10">
+        <!-- Το HUD του παίκτη (Κείμενο στην οθόνη) -->
+        <a-text station-logic value="" align="center" width="7" position="0 1.2 -2" color="#ff4444" font="mozillavr"></a-text>
+        <a-cursor color="cyan" fuse="true" far="12" animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1"></a-cursor>
       </a-camera>
 
-      <!-- Το 3Δ Αντικείμενο που βρήκες (Σφαίρα) -->
-      <a-entity dynamic-body id="sphere" gltf-model="#sphere-model" scale="1 1 1" position="-5 1 -5" interaction></a-entity>
+      <!-- ΕΣΩΤΕΡΙΚΗ ΔΙΑΚΟΣΜΗΣΗ & PUZZLES -->
 
-      <!-- Ο Ενεργειακός Κρύσταλλος (που φτιάξαμε με κώδικα) -->
-      <a-octahedron dynamic-body id="lightning" color="#00ffff" radius="0.4" position="5 1 -8" interaction animation="property: rotation; to: 0 360 0; loop: true; dur: 3000"></a-octahedron>
+      <!-- Βάθρο 1 (Κεντρικό Κοντρόλ) -->
+      <a-cylinder color="#333" radius="1.5" height="1" position="-5 0.5 -5">
+        <a-ring color="cyan" radius-inner="1.3" radius-outer="1.5" position="0 0.51 0" rotation="-90 0 0"></a-ring>
+      </a-cylinder>
+      
+      <!-- Το 3Δ Αντικείμενο που βρήκες (Σφαίρα) - Αιωρείται και γυρίζει πάνω από το βάθρο -->
+      <a-entity id="sphere" gltf-model="#sphere-model" scale="1 1 1" position="-5 2 -5" interaction animation="property: position; to: -5 2.2 -5; dir: alternate; loop: true; dur: 2000"></a-entity>
+
+      <!-- Βάθρο 2 (Πηγή Ενέργειας) -->
+      <a-box color="#333" width="2" height="1" depth="2" position="6 0.5 -7">
+        <a-plane color="yellow" width="1.8" height="1.8" position="0 0.51 0" rotation="-90 0 0" material="wireframe: true"></a-plane>
+      </a-box>
+
+      <!-- Ο Ενεργειακός Κρύσταλλος (με εφέ Σωματιδίων!) -->
+      <a-octahedron id="lightning" color="#00ffff" radius="0.5" position="6 2 -7" material="wireframe: true" interaction 
+        animation="property: rotation; to: 360 360 0; loop: true; dur: 4000"
+        spe-particles="color: cyan, blue; max-age: 0.5; particle-count: 30; velocity: 2; distribution: sphere; radius: 0.2">
+        <!-- Εσωτερικός πυρήνας -->
+        <a-octahedron color="white" radius="0.2"></a-octahedron>
+      </a-octahedron>
 
     </a-scene>
   </body>
