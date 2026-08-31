@@ -1,0 +1,103 @@
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+
+    <script>
+      AFRAME.registerComponent('moving', {
+        init: function () {
+          this.el.addEventListener('mouseenter', wave);
+          this.el.addEventListener('mouseleave', stand);
+          this.el.addEventListener('click', dance);
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Βίντεο κάμερας υπολογιστή -->
+    <video id="video" width="640" height="480" style="float: right; zoom: 0.5"></video>
+
+    <!-- Σκηνή VR -->
+    <a-scene cursor="rayOrigin: mouse" embedded style="float: left; width: 500px">
+      <a-entity id="boy" gltf-model="url(boy/boy.gltf)" position="0 0 -3"
+                animation-mixer="timeScale: 0" moving></a-entity>
+    </a-scene>
+
+    <script>
+      var boy = document.getElementById('boy');
+
+      function wave() {
+        var rA = boy.object3D.getObjectByName("RightArm_044");
+        var rFA = boy.object3D.getObjectByName("RightForeArm_045");
+        if (rA && rFA) {
+          rA.rotation.x = -0.5;
+          rA.rotation.y = 0;
+          rA.rotation.z = 0;
+          rFA.rotation.x = 0;
+          rFA.rotation.y = 1;
+          rFA.rotation.z = -1;
+        }
+      }
+
+      function stand() {
+        boy.removeAttribute('animation-mixer');
+        boy.setAttribute('animation-mixer', { timeScale: 0 });
+      }
+
+      function dance() { 
+        boy.setAttribute('animation-mixer', { timeScale: 1 }); 
+      }
+
+      const video = document.getElementById("video");
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
+          video.srcObject = stream; 
+          video.play(); 
+        }); 
+      }
+
+      const options = { inputs: 34, outputs: 3, task: 'classification' };
+      const modelInfo = { model: 'model.json', metadata: 'model_meta.json', weights: 'model.weights.bin' };
+      var nn = ml5.neuralNetwork(options), data = false, label = -1, poses;
+      
+      nn.load(modelInfo, modelLoaded);
+      function modelLoaded() { data = true; }
+
+      const poseNet = ml5.poseNet(video, modelReady);
+      function modelReady() { poseNet.multiPose(video); }
+      poseNet.on("pose", gotPoses);
+
+      function gotPoses(results) { 
+        poses = results; 
+        if (data) run(); 
+      }
+
+      function run() {
+        if (poses.length > 0) {
+          var keypoints = poses[0].pose.keypoints;
+          var inputs = [];
+          for (let i = 0; i < 17; i++) {
+            inputs.push(keypoints[i].position.x);
+            inputs.push(keypoints[i].position.y);
+          }
+          nn.classify(inputs, classify);
+        }
+      }
+
+      function classify(error, results) {
+        if (error) return;
+        var l = results[0].label;
+        var c = results[0].confidence;
+        if (c > 0.01 && label != l) {
+          label = l;
+          switch (l) {
+            case '1': wave(); break;
+            case '2': stand(); break;
+            default: dance(); break;
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
