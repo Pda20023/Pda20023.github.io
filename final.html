@@ -4,7 +4,7 @@
     <title>Orbital Lockdown: Ultimate Clean Edition</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://c-frame.github.io/aframe-physics-system/dist/aframe-physics-system.js"></script>
-    <script src="https://unpkg.com/aframe-spe-particles-component@^1.0.4/dist/aframe-spe-particles-component.min.js"></script>
+    <!-- ΑΦΑΙΡΕΘΗΚΕ Η ΧΑΛΑΣΜΕΝΗ ΒΙΒΛΙΟΘΗΚΗ ΤΩΝ PARTICLES -->
     
     <script>
       const GAME_STATE = {
@@ -34,6 +34,8 @@
           this.door = document.getElementById('exit-door');
           this.alarm = document.getElementById('alarm-system');
           this.ambient = document.getElementById('ambient-light');
+          this.alarmAudio = document.getElementById('snd-alarm');
+          this.doorAudio = document.getElementById('snd-door');
         },
 
         updateHUD: function(message, color = '#33ff33') {
@@ -59,6 +61,7 @@
             if (this.data.oxygenTime <= 0) {
               this.updateHUD('ASPHYXIATION\nSYSTEM SHUTDOWN', '#ff0000');
               document.querySelector('a-scene').setAttribute('fog', 'color: black; near: 0; far: 4');
+              if(this.alarmAudio) this.alarmAudio.pause();
             }
           }
         },
@@ -85,6 +88,7 @@
           this.changeState(GAME_STATE.CRITICAL);
           el.setAttribute('visible', 'false');
           el.setAttribute('position', '0 1000 0'); 
+          if(this.alarmAudio) this.alarmAudio.play().catch(e => console.log(e));
           document.querySelector('a-scene').setAttribute('fog', 'color: #1a0000; near: 2; far: 20'); 
         },
 
@@ -98,38 +102,47 @@
 
         handleSphere: function(el) {
           if (this.data.state !== GAME_STATE.CRITICAL) return;
+          
           this.changeState(GAME_STATE.STABLE);
           this.updateHUD('LIFE SUPPORT STABILIZED\nUNLOCK POWER CORE');
+          
           this.alarm.setAttribute('animation__rot', 'enabled: false');
           this.alarm.setAttribute('visible', 'false');
+          if(this.alarmAudio) this.alarmAudio.pause();
+          
           this.ambient.setAttribute('color', '#3366ff');
           this.ambient.setAttribute('intensity', '0.6');
           this.ambient.removeAttribute('flicker'); 
+          
           this.absorbItem(el);
         },
 
         handleKeypad: function(targetId, el) {
           if (this.data.state !== GAME_STATE.STABLE) return;
+
           var expected = this.data.keypadCode[this.data.currentInput];
           
           if (targetId === expected) {
             this.data.currentInput++;
             el.setAttribute('material', 'color: #00ff00'); 
+            
             if (this.data.currentInput === 3) {
               this.updateHUD('CODE ACCEPTED\nSHIELD DOWN');
               document.getElementById('crystal-shield').setAttribute('animation', 'property: scale; to: 0 0 0; dur: 500');
             }
           } else {
-            this.resetKeypad(); 
+            this.resetKeypad();
           }
         },
 
         resetKeypad: function() {
           this.data.currentInput = 0;
           this.updateHUD('INCORRECT CODE\nSYSTEM RESET', '#ff0000');
+          
           document.getElementById('btn1').setAttribute('material', 'color: #ff3333');
           document.getElementById('btn2').setAttribute('material', 'color: #ff3333');
           document.getElementById('btn3').setAttribute('material', 'color: #ff3333');
+          
           setTimeout(() => { 
             if(this.data.state === GAME_STATE.STABLE) {
               this.updateHUD('LIFE SUPPORT STABILIZED\nUNLOCK POWER CORE'); 
@@ -146,9 +159,9 @@
             this.updateHUD('ACCESS DENIED\nENTER OVERRIDE CODE', '#ff3333');
             return;
           }
+          
           this.changeState(GAME_STATE.POWERED);
           this.updateHUD('MAIN REACTOR ONLINE\nACCESS AIRLOCK', '#00ffff');
-          el.removeAttribute('spe-particles');
           this.absorbItem(el);
         },
 
@@ -156,7 +169,10 @@
           if (this.data.state === GAME_STATE.POWERED) {
             this.changeState(GAME_STATE.ESCAPED);
             this.updateHUD('MISSION COMPLETE\nESCAPE SUCCESSFUL', '#00ffff');
+            
+            if(this.doorAudio) this.doorAudio.play().catch(e => console.log(e));
             this.door.setAttribute('animation', 'property: position; to: 0 -7 -14.8; dur: 5000; easing: easeInOutQuad');
+            
             document.querySelector('a-scene').setAttribute('animation__fog', 'property: fog.far; to: 4000; dur: 4000');
             document.querySelector('a-scene').setAttribute('fog', 'color: #020205');
           } else {
@@ -192,11 +208,18 @@
     </script>
   </head>
   <body>
-    <!-- FOG: Το far είναι στο 3 για να φαίνεται η αρχική οθόνη! -->
     <a-scene id="s1" physics="debug: false" fog="color: black; near: 0; far: 3" shadow="type: pcfsoft" game-manager>
       
-      <!-- ΑΦΑΙΡΕΘΗΚΑΝ ΟΛΑ ΤΑ EXTERNAL ASSETS ΓΙΑ ΝΑ ΜΗΝ ΚΟΛΛΗΣΕΙ ΠΟΤΕ -->
-      <a-sky color="#020205"></a-sky>
+      <a-assets timeout="3000">
+        <a-asset-item id="sphere-model" src="sphere.glb"></a-asset-item>
+        <img id="stars" src="eso0932a.jpg">
+        <img id="earth" src="flat_earth03.jpg">
+        <audio id="snd-alarm" src="alarm.mp3" preload="auto" loop></audio>
+        <audio id="snd-door" src="door.mp3" preload="auto"></audio>
+      </a-assets>
+
+      <a-sky radius="2000" src="#stars" rotation="0 90 0"></a-sky>
+      <a-sphere radius="500" src="#earth" position="0 -100 -1200" animation="property: rotation; to: 0 -360 0; loop: true; dur: 80000"></a-sphere>
 
       <a-light id="ambient-light" type="ambient" intensity="0.2" color="white" flicker></a-light>
       
@@ -205,7 +228,6 @@
         <a-light type="spot" color="#ff0000" intensity="5" angle="50" position="0 0 0" rotation="-45 180 0" distance="30"></a-light>
       </a-entity>
 
-      <!-- Δωμάτιο -->
       <a-plane static-body width="30" height="30" position="0 0 0" rotation="-90 0 0" material="color: #222; metalness: 0.8; roughness: 0.4"></a-plane>
       <a-plane width="30" height="30" position="0 0.02 0" rotation="-90 0 0" material="color: #000; wireframe: true"></a-plane>
       <a-plane static-body width="30" height="10" position="-15 5 0" rotation="0 90 0" material="color: #111; metalness: 0.9; roughness: 0.3"></a-plane>
@@ -238,11 +260,9 @@
       </a-camera>
 
       <a-cylinder radius="1" height="1.2" position="-6 0.6 -6" material="color: #333; metalness: 0.8"></a-cylinder>
+      <!-- Το sphere.glb φορτώνει κανονικά! -->
+      <a-entity id="sphere" gltf-model="#sphere-model" scale="1 1 1" position="-6 2 -6" scannable animation="property: position; to: -6 2.2 -6; dir: alternate; loop: true; dur: 2000"></a-entity>
       
-      <!-- H ΣΦΑΙΡΑ (Native A-Frame αντί για glb) -->
-      <a-sphere id="sphere" radius="0.8" color="#33ff33" material="metalness: 0.8; roughness: 0.2" position="-6 2 -6" scannable animation="property: position; to: -6 2.2 -6; dir: alternate; loop: true; dur: 2000"></a-sphere>
-      
-      <!-- Κιβώτια -->
       <a-box id="crate1" dynamic-body="mass: 5" width="1.5" height="1.5" depth="1.5" position="-5.5 4 -5" material="color: #555" scannable></a-box>
       <a-box id="crate2" dynamic-body="mass: 5" width="1.5" height="1.5" depth="1.5" position="-6.5 6 -5" material="color: #444" scannable></a-box>
       <a-box id="crate3" dynamic-body="mass: 5" width="1.5" height="1.5" depth="1.5" position="-5.5 8 -6" material="color: #666" scannable></a-box>
@@ -258,8 +278,7 @@
       <a-sphere id="crystal-shield" radius="0.8" position="6 2 -6" material="color: cyan; wireframe: true; opacity: 0.5" animation="property: rotation; to: 0 360 0; loop: true; dur: 5000"></a-sphere>
 
       <a-octahedron id="lightning" color="cyan" radius="0.4" position="6 2 -6" material="wireframe: true; emissive: cyan; emissiveIntensity: 1.5" scannable 
-                    animation="property: rotation; to: 360 360 0; loop: true; dur: 3000"
-                    spe-particles="color: cyan, white; max-age: 0.5; particle-count: 50; velocity: 1; distribution: sphere; radius: 0.1">
+                    animation="property: rotation; to: 360 360 0; loop: true; dur: 3000">
         <a-octahedron color="white" radius="0.15" material="emissive: white"></a-octahedron>
       </a-octahedron>
 
