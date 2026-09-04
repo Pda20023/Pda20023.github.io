@@ -1,11 +1,21 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Orbital Lockdown: Ultimate Edition (Safe Mode)</title>
+    <title>Orbital Lockdown: Ultimate Clean Edition</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://c-frame.github.io/aframe-physics-system/dist/aframe-physics-system.js"></script>
+    <script src="https://unpkg.com/aframe-spe-particles-component@^1.0.4/dist/aframe-spe-particles-component.min.js"></script>
     
     <script>
+      // ΚΑΘΑΡΟΣ ΚΩΔΙΚΑΣ: 1. Ορισμός Σταθερών (Constants)
+      const GAME_STATE = {
+        INTRO: 'intro',
+        CRITICAL: 'critical',
+        STABLE: 'stable',
+        POWERED: 'powered',
+        ESCAPED: 'escaped'
+      };
+
       AFRAME.registerComponent('flicker', {
         tick: function () {
           if (Math.random() > 0.90) this.el.setAttribute('intensity', Math.random() * 0.4 + 0.1);
@@ -15,8 +25,8 @@
       AFRAME.registerComponent('game-manager', {
         schema: {
           oxygenTime: {type: 'number', default: 3500}, 
-          state: {type: 'string', default: 'intro'},
-          keypadCode: {type: 'array', default: ['btn3', 'btn1', 'btn2']},
+          state: {type: 'string', default: GAME_STATE.INTRO}, 
+          keypadCode: {type: 'array', default: ['btn3', 'btn1', 'btn2']}, 
           currentInput: {type: 'number', default: 0}
         },
         
@@ -25,106 +35,158 @@
           this.door = document.getElementById('exit-door');
           this.alarm = document.getElementById('alarm-system');
           this.ambient = document.getElementById('ambient-light');
+          this.alarmAudio = document.getElementById('snd-alarm');
+          this.doorAudio = document.getElementById('snd-door');
+        },
+
+        // ΚΑΘΑΡΟΣ ΚΩΔΙΚΑΣ: 2. Βοηθητικές Συναρτήσεις (Helpers)
+        updateHUD: function(message, color = '#33ff33') {
+          this.ui.setAttribute('value', message);
+          this.ui.setAttribute('color', color);
+        },
+
+        changeState: function(newState) {
+          // Ο σωστός τρόπος του A-Frame για αλλαγή state
+          this.el.setAttribute('game-manager', 'state', newState);
         },
 
         tick: function () {
-          if (this.data.state === 'critical') {
+          if (this.data.state === GAME_STATE.CRITICAL) {
             this.data.oxygenTime--;
+            
+            // Panic Mode
             if (this.data.oxygenTime < 1000 && this.data.oxygenTime > 0) {
               var flash = (this.data.oxygenTime % 20 < 10) ? '#ff0000' : '#ffffff';
-              this.ui.setAttribute('color', flash);
-              this.ui.setAttribute('value', 'CRITICAL WARNING!\nOXYGEN: ' + Math.round(this.data.oxygenTime / 100) + '%');
+              this.updateHUD('CRITICAL WARNING!\nOXYGEN: ' + Math.round(this.data.oxygenTime / 100) + '%', flash);
             } else {
-              this.ui.setAttribute('color', '#ff3333');
-              this.ui.setAttribute('value', 'WARNING: LIFE SUPPORT FAILING\nOXYGEN: ' + Math.round(this.data.oxygenTime / 100) + '%');
+              this.updateHUD('WARNING: LIFE SUPPORT FAILING\nOXYGEN: ' + Math.round(this.data.oxygenTime / 100) + '%', '#ff3333');
             }
+            
             if (this.data.oxygenTime <= 0) {
-              this.ui.setAttribute('color', '#ff0000');
-              this.ui.setAttribute('value', 'ASPHYXIATION\nSYSTEM SHUTDOWN');
+              this.updateHUD('ASPHYXIATION\nSYSTEM SHUTDOWN', '#ff0000');
               document.querySelector('a-scene').setAttribute('fog', 'color: black; near: 0; far: 4');
+              if(this.alarmAudio) this.alarmAudio.pause();
             }
           }
         },
 
+        // ΚΑΘΑΡΟΣ ΚΩΔΙΚΑΣ: 3. Router - Απλή δρομολόγηση, χωρίς "σεντόνια" από if
         triggerAction: function(targetId, el) {
-          if (this.data.state === 'escaped' || this.data.oxygenTime <= 0) return;
+          if (this.data.state === GAME_STATE.ESCAPED || this.data.oxygenTime <= 0) return;
 
-          if (this.data.state === 'intro' && targetId === 'start-btn') {
-            this.data.state = 'critical';
-            el.setAttribute('visible', 'false');
-            el.setAttribute('position', '0 1000 0');
-            document.querySelector('a-scene').setAttribute('fog', 'color: #1a0000; near: 2; far: 20');
+          if (this.data.state === GAME_STATE.INTRO && targetId === 'start-btn') {
+            this.handleIntro(el);
+          } else if (targetId.startsWith('crate')) {
+            this.handleCrates(el);
+          } else if (targetId === 'sphere') {
+            this.handleSphere(el);
+          } else if (targetId.startsWith('btn')) {
+            this.handleKeypad(targetId, el);
+          } else if (targetId === 'lightning') {
+            this.handleCrystal(el);
+          } else if (targetId === 'exit-door') {
+            this.handleDoor();
+          }
+        },
+
+        // ==========================================
+        // ΛΟΓΙΚΗ ΠΑΙΧΝΙΔΙΟΥ (GAMEPLAY HANDLERS)
+        // ==========================================
+
+        handleIntro: function(el) {
+          this.changeState(GAME_STATE.CRITICAL);
+          el.setAttribute('visible', 'false');
+          el.setAttribute('position', '0 1000 0'); 
+          if(this.alarmAudio) this.alarmAudio.play().catch(e => console.log(e));
+          document.querySelector('a-scene').setAttribute('fog', 'color: #1a0000; near: 2; far: 20'); 
+        },
+
+        handleCrates: function(el) {
+          if (el.body) {
+            var force = new CANNON.Vec3((Math.random() - 0.5) * 15, 10, (Math.random() - 0.5) * 15);
+            el.body.applyImpulse(force, el.body.position);
+            this.updateHUD('OBSTACLE CLEARED', '#00ffff');
+          }
+        },
+
+        handleSphere: function(el) {
+          if (this.data.state !== GAME_STATE.CRITICAL) return;
+          
+          this.changeState(GAME_STATE.STABLE);
+          this.updateHUD('LIFE SUPPORT STABILIZED\nUNLOCK POWER CORE');
+          
+          this.alarm.setAttribute('animation__rot', 'enabled: false');
+          this.alarm.setAttribute('visible', 'false');
+          if(this.alarmAudio) this.alarmAudio.pause();
+          
+          this.ambient.setAttribute('color', '#3366ff');
+          this.ambient.setAttribute('intensity', '0.6');
+          this.ambient.removeAttribute('flicker'); 
+          
+          this.absorbItem(el);
+        },
+
+        handleKeypad: function(targetId, el) {
+          if (this.data.state !== GAME_STATE.STABLE) return;
+
+          var expected = this.data.keypadCode[this.data.currentInput];
+          
+          if (targetId === expected) {
+            this.data.currentInput++;
+            el.setAttribute('material', 'color: #00ff00'); 
+            
+            if (this.data.currentInput === 3) {
+              this.updateHUD('CODE ACCEPTED\nSHIELD DOWN');
+              document.getElementById('crystal-shield').setAttribute('animation', 'property: scale; to: 0 0 0; dur: 500');
+            }
+          } else {
+            this.resetKeypad(); // Κλήση της βοηθητικής συνάρτησης!
+          }
+        },
+
+        resetKeypad: function() {
+          this.data.currentInput = 0;
+          this.updateHUD('INCORRECT CODE\nSYSTEM RESET', '#ff0000');
+          
+          document.getElementById('btn1').setAttribute('material', 'color: #ff3333');
+          document.getElementById('btn2').setAttribute('material', 'color: #ff3333');
+          document.getElementById('btn3').setAttribute('material', 'color: #ff3333');
+          
+          setTimeout(() => { 
+            if(this.data.state === GAME_STATE.STABLE) {
+              this.updateHUD('LIFE SUPPORT STABILIZED\nUNLOCK POWER CORE'); 
+            }
+          }, 1500);
+        },
+
+        handleCrystal: function(el) {
+          if (this.data.state === GAME_STATE.CRITICAL) {
+            this.updateHUD('RADIATION TOO HIGH!\nSTABILIZE OXYGEN FIRST', '#ff3333');
             return;
           }
-          if (this.data.state === 'intro') return; 
-
-          if (targetId.startsWith('crate')) {
-            if (el.body) {
-              var force = new CANNON.Vec3((Math.random() - 0.5) * 15, 10, (Math.random() - 0.5) * 15);
-              el.body.applyImpulse(force, el.body.position);
-              this.ui.setAttribute('value', 'OBSTACLE CLEARED');
-            }
+          if (this.data.currentInput < 3) {
+            this.updateHUD('ACCESS DENIED\nENTER OVERRIDE CODE', '#ff3333');
             return;
           }
+          
+          this.changeState(GAME_STATE.POWERED);
+          this.updateHUD('MAIN REACTOR ONLINE\nACCESS AIRLOCK', '#00ffff');
+          el.removeAttribute('spe-particles');
+          this.absorbItem(el);
+        },
 
-          if (targetId === 'sphere' && this.data.state === 'critical') {
-            this.data.state = 'stable';
-            this.ui.setAttribute('value', 'LIFE SUPPORT STABILIZED\nUNLOCK POWER CORE');
-            this.ui.setAttribute('color', '#33ff33');
-            this.alarm.setAttribute('animation__rot', 'enabled: false');
-            this.alarm.setAttribute('visible', 'false');
-            this.ambient.setAttribute('color', '#3366ff');
-            this.ambient.setAttribute('intensity', '0.6');
-            this.ambient.removeAttribute('flicker');
-            this.absorbItem(el);
-          }
-
-          if (targetId.startsWith('btn') && this.data.state === 'stable') {
-            var expected = this.data.keypadCode[this.data.currentInput];
-            if (targetId === expected) {
-              this.data.currentInput++;
-              el.setAttribute('material', 'color: #00ff00');
-              if (this.data.currentInput === 3) {
-                this.ui.setAttribute('value', 'CODE ACCEPTED\nSHIELD DOWN');
-                document.getElementById('crystal-shield').setAttribute('animation', 'property: scale; to: 0 0 0; dur: 500');
-              }
-            } else {
-              this.data.currentInput = 0;
-              this.ui.setAttribute('value', 'INCORRECT CODE\nSYSTEM RESET');
-              this.ui.setAttribute('color', '#ff0000');
-              document.getElementById('btn1').setAttribute('material', 'color: #ff3333');
-              document.getElementById('btn2').setAttribute('material', 'color: #ff3333');
-              document.getElementById('btn3').setAttribute('material', 'color: #ff3333');
-              setTimeout(() => { this.ui.setAttribute('color', '#33ff33'); }, 1500);
-            }
-            return;
-          }
-
-          if (targetId === 'lightning') {
-            if (this.data.state === 'critical') {
-              this.ui.setAttribute('value', 'RADIATION TOO HIGH!\nSTABILIZE OXYGEN FIRST');
-              return;
-            }
-            if (this.data.currentInput < 3) {
-              this.ui.setAttribute('value', 'ACCESS DENIED\nENTER OVERRIDE CODE');
-              return;
-            }
-            this.data.state = 'powered';
-            this.ui.setAttribute('value', 'MAIN REACTOR ONLINE\nACCESS AIRLOCK');
-            this.absorbItem(el);
-          }
-
-          if (targetId === 'exit-door') {
-            if (this.data.state === 'powered') {
-              this.data.state = 'escaped';
-              this.ui.setAttribute('value', 'MISSION COMPLETE\nESCAPE SUCCESSFUL');
-              this.ui.setAttribute('color', '#00ffff');
-              this.door.setAttribute('animation', 'property: position; to: 0 -7 -14.8; dur: 5000; easing: easeInOutQuad');
-              document.querySelector('a-scene').setAttribute('animation__fog', 'property: fog.far; to: 4000; dur: 4000');
-              document.querySelector('a-scene').setAttribute('fog', 'color: #020205');
-            } else {
-              this.ui.setAttribute('value', 'ACCESS DENIED\nSYSTEM UNPOWERED');
-            }
+        handleDoor: function() {
+          if (this.data.state === GAME_STATE.POWERED) {
+            this.changeState(GAME_STATE.ESCAPED);
+            this.updateHUD('MISSION COMPLETE\nESCAPE SUCCESSFUL', '#00ffff');
+            
+            if(this.doorAudio) this.doorAudio.play().catch(e => console.log(e));
+            this.door.setAttribute('animation', 'property: position; to: 0 -7 -14.8; dur: 5000; easing: easeInOutQuad');
+            
+            document.querySelector('a-scene').setAttribute('animation__fog', 'property: fog.far; to: 4000; dur: 4000');
+            document.querySelector('a-scene').setAttribute('fog', 'color: #020205');
+          } else {
+            this.updateHUD('ACCESS DENIED\nSYSTEM UNPOWERED', '#ff3333');
           }
         },
 
@@ -141,6 +203,7 @@
         init: function () {
           var game = document.querySelector('a-scene').components['game-manager'];
           this.el.addEventListener('click', () => { game.triggerAction(this.el.id, this.el); });
+          
           this.el.addEventListener('mouseenter', () => {
             if(this.el.id !== 'start-btn') {
                this.el.setAttribute('animation__scale', 'property: scale; to: 1.2 1.2 1.2; dur: 300; dir: alternate; loop: true');
@@ -155,11 +218,18 @@
     </script>
   </head>
   <body>
-    <a-scene id="s1" physics="debug: false" fog="color: black; near: 0; far: 1" shadow="type: pcfsoft" game-manager>
+    <a-scene id="s1" physics="debug: false" fog="color: black; near: 0; far: 3" shadow="type: pcfsoft" game-manager>
       
-      <!-- ΑΦΑΙΡΕΣΑ ΤΑ ASSETS ΓΙΑ ΝΑ ΜΗΝ ΚΟΛΛΑΕΙ -->
-      
-      <a-sky color="#020205"></a-sky>
+      <a-assets timeout="3000">
+        <a-asset-item id="sphere-model" src="sphere.glb"></a-asset-item>
+        <img id="stars" src="eso0932a.jpg">
+        <img id="earth" src="flat_earth03.jpg">
+        <audio id="snd-alarm" src="alarm.mp3" preload="auto" loop></audio>
+        <audio id="snd-door" src="door.mp3" preload="auto"></audio>
+      </a-assets>
+
+      <a-sky radius="2000" src="#stars" rotation="0 90 0"></a-sky>
+      <a-sphere radius="500" src="#earth" position="0 -100 -1200" animation="property: rotation; to: 0 -360 0; loop: true; dur: 80000"></a-sphere>
 
       <a-light id="ambient-light" type="ambient" intensity="0.2" color="white" flicker></a-light>
       
@@ -169,6 +239,7 @@
       </a-entity>
 
       <a-plane static-body width="30" height="30" position="0 0 0" rotation="-90 0 0" material="color: #222; metalness: 0.8; roughness: 0.4"></a-plane>
+      <a-plane width="30" height="30" position="0 0.02 0" rotation="-90 0 0" material="color: #000; wireframe: true"></a-plane>
       <a-plane static-body width="30" height="10" position="-15 5 0" rotation="0 90 0" material="color: #111; metalness: 0.9; roughness: 0.3"></a-plane>
       <a-plane static-body width="30" height="10" position="15 5 0" rotation="0 -90 0" material="color: #111; metalness: 0.9; roughness: 0.3"></a-plane>
       <a-plane static-body width="30" height="10" position="0 5 15" rotation="0 180 0" material="color: #111; metalness: 0.9; roughness: 0.3"></a-plane>
@@ -199,9 +270,7 @@
       </a-camera>
 
       <a-cylinder radius="1" height="1.2" position="-6 0.6 -6" material="color: #333; metalness: 0.8"></a-cylinder>
-      
-      <!-- ΑΝΤΙ ΓΙΑ 3D ΜΟΝΤΕΛΟ, ΕΒΑΛΑ ΑΠΛΗ ΣΦΑΙΡΑ (A-SPHERE) -->
-      <a-sphere id="sphere" radius="0.8" color="#33ff33" position="-6 2 -6" scannable animation="property: position; to: -6 2.2 -6; dir: alternate; loop: true; dur: 2000"></a-sphere>
+      <a-entity id="sphere" gltf-model="#sphere-model" scale="1 1 1" position="-6 2 -6" scannable animation="property: position; to: -6 2.2 -6; dir: alternate; loop: true; dur: 2000"></a-entity>
       
       <a-box id="crate1" dynamic-body="mass: 5" width="1.5" height="1.5" depth="1.5" position="-5.5 4 -5" material="color: #555" scannable></a-box>
       <a-box id="crate2" dynamic-body="mass: 5" width="1.5" height="1.5" depth="1.5" position="-6.5 6 -5" material="color: #444" scannable></a-box>
@@ -217,7 +286,9 @@
 
       <a-sphere id="crystal-shield" radius="0.8" position="6 2 -6" material="color: cyan; wireframe: true; opacity: 0.5" animation="property: rotation; to: 0 360 0; loop: true; dur: 5000"></a-sphere>
 
-      <a-octahedron id="lightning" color="cyan" radius="0.4" position="6 2 -6" material="wireframe: true; emissive: cyan; emissiveIntensity: 1.5" scannable animation="property: rotation; to: 360 360 0; loop: true; dur: 3000">
+      <a-octahedron id="lightning" color="cyan" radius="0.4" position="6 2 -6" material="wireframe: true; emissive: cyan; emissiveIntensity: 1.5" scannable 
+                    animation="property: rotation; to: 360 360 0; loop: true; dur: 3000"
+                    spe-particles="color: cyan, white; max-age: 0.5; particle-count: 50; velocity: 1; distribution: sphere; radius: 0.1">
         <a-octahedron color="white" radius="0.15" material="emissive: white"></a-octahedron>
       </a-octahedron>
 
