@@ -4,7 +4,6 @@
     <title>Orbital Lockdown: Ultimate Clean Edition</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://c-frame.github.io/aframe-physics-system/dist/aframe-physics-system.js"></script>
-    <!-- ΑΦΑΙΡΕΘΗΚΕ Η ΧΑΛΑΣΜΕΝΗ ΒΙΒΛΙΟΘΗΚΗ ΤΩΝ PARTICLES -->
     
     <script>
       const GAME_STATE = {
@@ -191,8 +190,11 @@
 
       AFRAME.registerComponent('scannable', {
         init: function () {
-          var game = document.querySelector('a-scene').components['game-manager'];
-          this.el.addEventListener('click', () => { game.triggerAction(this.el.id, this.el); });
+          // ΔΙΟΡΘΩΣΗ BUG: Ο Διαχειριστής ψάχνεται τη στιγμή του κλικ, όχι νωρίτερα!
+          this.el.addEventListener('click', () => { 
+            var game = document.querySelector('a-scene').components['game-manager'];
+            if(game) game.triggerAction(this.el.id, this.el); 
+          });
           
           this.el.addEventListener('mouseenter', () => {
             if(this.el.id !== 'start-btn') {
@@ -260,7 +262,6 @@
       </a-camera>
 
       <a-cylinder radius="1" height="1.2" position="-6 0.6 -6" material="color: #333; metalness: 0.8"></a-cylinder>
-      <!-- Το sphere.glb φορτώνει κανονικά! -->
       <a-entity id="sphere" gltf-model="#sphere-model" scale="1 1 1" position="-6 2 -6" scannable animation="property: position; to: -6 2.2 -6; dir: alternate; loop: true; dur: 2000"></a-entity>
       
       <a-box id="crate1" dynamic-body="mass: 5" width="1.5" height="1.5" depth="1.5" position="-5.5 4 -5" material="color: #555" scannable></a-box>
