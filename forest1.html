@@ -1,845 +1,746 @@
-<a-scene
-  physics="debug: false; gravity: -9.8"
-  renderer="
-    antialias: true;
-    colorManagement: true;
-    physicallyCorrectLights: true;
-    sortObjects: true
-  "
-  background="color: #010305"
-  fog="type: linear; color: #020609; near: 1.5; far: 21"
-  shadow="type: pcfsoft"
-  game-manager
-  audio-gate
->
-  <!-- ======================================================
-       ASSETS
-       Assets are loaded once and reused by every instance.
-       ====================================================== -->
-
-  <a-assets timeout="15000">
-    <a-asset-item id="tree-model" src="tree.glb"></a-asset-item>
-    <a-asset-item id="mushroom-model" src="mushroom.glb"></a-asset-item>
-    <a-asset-item id="rock-model" src="rock.glb"></a-asset-item>
-    <a-asset-item id="arch-model" src="archway.glb"></a-asset-item>
-    <a-asset-item id="log-model" src="log.glb"></a-asset-item>
-
-    <img id="ground-texture" src="forest-ground.jpg">
-
-    <audio id="snd-wind" src="wind.mp3" preload="auto" loop></audio>
-    <audio
-      id="snd-creepy"
-      src="creepy.mp3"
-      preload="auto"
-      loop
-    ></audio>
-    <audio
-      id="snd-crickets"
-      src="crickets.mp3"
-      preload="auto"
-      loop
-    ></audio>
-  </a-assets>
-
-  <!-- ======================================================
-       SKY AND MOON
-       fog:false keeps the distant background visible.
-       ====================================================== -->
-
-  <a-sky
-    src="eso0932a.jpg"
-    rotation="0 95 0"
-    material="fog: false; color: #252d35"
-  ></a-sky>
-
-  <a-sphere
-    src="moon.jpg"
-    radius="2.6"
-    position="-17 24 -42"
-    material="
-      emissive: #c8d8ed;
-      emissiveIntensity: 0.32;
-      fog: false
-    "
-  ></a-sphere>
-
-  <!-- ======================================================
-       GROUND
-       One A-Frame unit represents approximately one metre.
-       ====================================================== -->
-
-  <a-plane
-    static-body
-    width="90"
-    height="90"
-    position="0 0 0"
-    rotation="-90 0 0"
-    material="
-      src: #ground-texture;
-      repeat: 24 24;
-      roughness: 1;
-      metalness: 0;
-      color: #344039
-    "
-    shadow="receive: true"
-  ></a-plane>
-
-  <!-- Invisible boundary walls -->
-
-  <a-plane
-    static-body
-    width="34"
-    height="8"
-    position="-17 4 0"
-    rotation="0 90 0"
-    visible="false"
-  ></a-plane>
-
-  <a-plane
-    static-body
-    width="34"
-    height="8"
-    position="17 4 0"
-    rotation="0 -90 0"
-    visible="false"
-  ></a-plane>
-
-  <a-plane
-    static-body
-    width="34"
-    height="8"
-    position="0 4 17"
-    rotation="0 180 0"
-    visible="false"
-  ></a-plane>
-
-  <a-plane
-    static-body
-    width="34"
-    height="8"
-    position="0 4 -17"
-    visible="false"
-  ></a-plane>
-
-  <!-- ======================================================
-       ATMOSPHERIC LIGHTING
-       ambient-light is referenced by game-manager.
-       ====================================================== -->
-
-  <a-light
-    id="ambient-light"
-    type="ambient"
-    intensity="0.16"
-    color="#405067"
-    flicker
-  ></a-light>
-
-  <a-light
-    type="directional"
-    color="#8da8cb"
-    intensity="0.42"
-    position="-12 24 -18"
-    cast-shadow="true"
-    shadow-camera-far="55"
-    shadow-camera-left="-18"
-    shadow-camera-right="18"
-    shadow-camera-top="18"
-    shadow-camera-bottom="-18"
-  ></a-light>
-
-  <!-- ======================================================
-       FOREST ENVIRONMENT
-       The trail runs from the camera at z=8 toward z=-11.
-       Trees use staggered clusters rather than a circle.
-       ====================================================== -->
-
-  <a-entity id="forest-environment">
-
-    <!-- NEAR LEFT SIDE -->
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-5.8 0 9.2"
-      rotation="0 18 0"
-      scale="2.75 2.75 2.75"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-3.9 0 6"
-      rotation="0 72 0"
-      scale="2.3 2.3 2.3"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-6.6 0 3.8"
-      rotation="0 141 0"
-      scale="3.05 3.05 3.05"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-5.1 0 0.1"
-      rotation="0 224 0"
-      scale="2.55 2.55 2.55"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-7 0 -2.8"
-      rotation="0 309 0"
-      scale="3.2 3.2 3.2"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-4.7 0 -6"
-      rotation="0 36 0"
-      scale="2.4 2.4 2.4"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-6.3 0 -9"
-      rotation="0 188 0"
-      scale="2.9 2.9 2.9"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-4.1 0 -12.6"
-      rotation="0 264 0"
-      scale="2.25 2.25 2.25"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <!-- NEAR RIGHT SIDE -->
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="4.9 0 9.6"
-      rotation="0 331 0"
-      scale="2.6 2.6 2.6"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="3.8 0 6.4"
-      rotation="0 201 0"
-      scale="2.25 2.25 2.25"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="6.4 0 3.4"
-      rotation="0 96 0"
-      scale="3.05 3.05 3.05"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="7.2 0 -0.2"
-      rotation="0 149 0"
-      scale="2.7 2.7 2.7"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="7 0 -5.5"
-      rotation="0 241 0"
-      scale="3.15 3.15 3.15"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="4.9 0 -8"
-      rotation="0 24 0"
-      scale="2.35 2.35 2.35"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="6.5 0 -11.4"
-      rotation="0 117 0"
-      scale="2.85 2.85 2.85"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <!-- OUTER LEFT FOG LAYER
-         No dynamic bodies or shadows are used here. -->
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-11.6 0 12"
-      rotation="0 58 0"
-      scale="3.35 3.35 3.35"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-10.2 0 6.9"
-      rotation="0 173 0"
-      scale="2.95 2.95 2.95"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-12.6 0 1"
-      rotation="0 278 0"
-      scale="3.25 3.25 3.25"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-10.8 0 -5"
-      rotation="0 11 0"
-      scale="2.8 2.8 2.8"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-11.5 0 -11.5"
-      rotation="0 207 0"
-      scale="3.4 3.4 3.4"
-    ></a-entity>
-
-    <!-- OUTER RIGHT FOG LAYER -->
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="11.3 0 12.7"
-      rotation="0 299 0"
-      scale="3.15 3.15 3.15"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="10.1 0 7.1"
-      rotation="0 83 0"
-      scale="2.85 2.85 2.85"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="12.7 0 1.8"
-      rotation="0 194 0"
-      scale="3.3 3.3 3.3"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="10.8 0 -4"
-      rotation="0 344 0"
-      scale="2.9 2.9 2.9"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="11.7 0 -10.8"
-      rotation="0 132 0"
-      scale="3.35 3.35 3.35"
-    ></a-entity>
-
-    <!-- TREES BEHIND THE ARCHWAY -->
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="-2.8 0 -15.2"
-      rotation="0 51 0"
-      scale="2.7 2.7 2.7"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#tree-model"
-      natural-sway
-      position="3.2 0 -15.8"
-      rotation="0 228 0"
-      scale="3.1 3.1 3.1"
-    ></a-entity>
-
-    <!-- DECORATIVE FALLEN LOGS
-         These are visual-only to reduce CANNON.js workload. -->
-
-    <a-entity
-      gltf-model="#log-model"
-      position="6.2 0.18 7.1"
-      rotation="4 38 84"
-      scale="0.3 0.3 0.3"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#log-model"
-      position="-7.4 0.2 -4.6"
-      rotation="-3 122 88"
-      scale="0.28 0.28 0.28"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#log-model"
-      position="8 0.16 -9.1"
-      rotation="6 244 82"
-      scale="0.24 0.24 0.24"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <!-- DECORATIVE ROCKS -->
-
-    <a-entity
-      gltf-model="#rock-model"
-      position="5.7 0.17 4.5"
-      rotation="8 27 -4"
-      scale="0.16 0.16 0.16"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#rock-model"
-      position="-6.5 0.2 7.5"
-      rotation="-4 136 6"
-      scale="0.2 0.2 0.2"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#rock-model"
-      position="7.8 0.14 -1.9"
-      rotation="6 219 -3"
-      scale="0.13 0.13 0.13"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-
-    <a-entity
-      gltf-model="#rock-model"
-      position="-5.3 0.15 -8"
-      rotation="2 304 5"
-      scale="0.14 0.14 0.14"
-      shadow="cast: true; receive: true"
-    ></a-entity>
-  </a-entity>
-
-  <!-- ======================================================
-       RUNE CLUE AND EXIT
-       Positions and IDs are preserved.
-       ====================================================== -->
-
-  <a-text
-    value="ANCIENT RUNES:\n3 - 1 - 2"
-    position="4 2.6 -4"
-    rotation="0 -25 0"
-    color="#ffaa00"
-    align="center"
-    scale="1.1 1.1 1.1"
-  ></a-text>
-
-  <a-entity
-    id="exit-door"
-    gltf-model="#arch-model"
-    position="0 0 -11"
-    scale="1.42 1.42 1.42"
-    shadow="cast: true; receive: true"
-    scannable
-  ></a-entity>
-
-  <a-circle
-    id="portal-glow"
-    position="0 2.5 -10.8"
-    radius="2.15"
-    visible="false"
-    material="
-      shader: flat;
-      color: #66ffff;
-      transparent: true;
-      opacity: 0.15;
-      side: double
-    "
-    animation__portalPulse="
-      property: material.opacity;
-      from: 0.15;
-      to: 0.7;
-      dir: alternate;
-      loop: true;
-      dur: 1200
-    "
-  ></a-circle>
-
-  <!-- ======================================================
-       CAMERA, HUD, CURSOR
-       ====================================================== -->
-
-  <a-camera id="cam" position="0 1.6 8">
-    <a-light
-      type="point"
-      color="#7896bd"
-      intensity="0.16"
-      distance="8"
-      decay="2"
-    ></a-light>
-
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>The Druid's Crossing</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #02060a;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas.a-canvas { touch-action: none; }
+
+    #audio-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2, 6, 10, 0.92);
+      color: #f2a43a;
+      text-align: center;
+    }
+
+    #audio-gate.hidden { display: none; }
+
+    #audio-gate .panel {
+      width: min(560px, 86vw);
+      padding: 32px;
+      border: 1px solid #8a5a22;
+      background: rgba(5, 12, 14, 0.96);
+    }
+
+    #audio-gate h1 {
+      margin: 0 0 14px;
+      font-size: clamp(28px, 5vw, 54px);
+      letter-spacing: 0.04em;
+    }
+
+    #audio-gate p {
+      margin: 0 0 24px;
+      color: #d8ddd7;
+      line-height: 1.5;
+    }
+
+    #audio-gate button {
+      padding: 14px 24px;
+      border: 1px solid #f2a43a;
+      background: #111b18;
+      color: #f2a43a;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+
+    #audio-gate button:disabled {
+      opacity: 0.45;
+      cursor: wait;
+    }
+  </style>
+
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.2/dist/aframe-physics-system.min.js"></script>
+
+  <script>
+    const GAME_STATE = {
+      INTRO: "intro",
+      CRITICAL: "critical",
+      STABLE: "stable",
+      POWERED: "powered",
+      ESCAPED: "escaped"
+    };
+
+    AFRAME.registerComponent("flicker", {
+      tick: function () {
+        if (Math.random() > 0.9) {
+          this.el.setAttribute("intensity", Math.random() * 0.4 + 0.1);
+        }
+      }
+    });
+
+    AFRAME.registerComponent("natural-sway", {
+      init: function () {
+        const rotation = this.el.getAttribute("rotation") || { x: 0, y: 0, z: 0 };
+        const amount = 0.4 + Math.random() * 0.8;
+        const duration = 3500 + Math.random() * 3500;
+        const delay = Math.random() * 2000;
+
+        this.el.setAttribute(
+          "animation__sway",
+          "property: rotation.z; from: " + (rotation.z - amount) +
+          "; to: " + (rotation.z + amount) +
+          "; dir: alternate; loop: true; dur: " + duration +
+          "; delay: " + delay + "; easing: easeInOutSine"
+        );
+      }
+    });
+
+    AFRAME.registerComponent("audio-gate", {
+      init: function () {
+        const gate = document.getElementById("audio-gate");
+        const button = document.getElementById("enter-forest");
+
+        const enableButton = function () {
+          button.disabled = false;
+          button.textContent = "ENTER THE FOREST";
+        };
+
+        if (this.el.hasLoaded) enableButton();
+        else this.el.addEventListener("loaded", enableButton, { once: true });
+
+        button.addEventListener("click", () => {
+          const manager = this.el.components["game-manager"];
+          if (!manager) return;
+
+          manager.unlockAudio();
+
+          if (manager.data.state === GAME_STATE.INTRO) {
+            manager.handleIntro(document.getElementById("start-btn"));
+          }
+
+          gate.classList.add("hidden");
+        });
+      }
+    });
+
+    AFRAME.registerComponent("game-manager", {
+      schema: {
+        lightTime: { type: "number", default: 60 },
+        state: { type: "string", default: GAME_STATE.INTRO },
+        keypadCode: { type: "array", default: ["btn3", "btn1", "btn2"] },
+        currentInput: { type: "number", default: 0 }
+      },
+
+      init: function () {
+        this.ui = document.getElementById("hud-text");
+        this.door = document.getElementById("exit-door");
+        this.ambient = document.getElementById("ambient-light");
+        this.creepyAudio = document.getElementById("snd-creepy");
+        this.windAudio = document.getElementById("snd-wind");
+        this.cricketsAudio = document.getElementById("snd-crickets");
+        this.restartBtn = document.getElementById("restart-btn");
+        this.sporeTrail = document.getElementById("spore-trail");
+        this.sporeLight = document.getElementById("spore-light");
+        this.portal = document.getElementById("portal-glow");
+
+        this.audioContext = null;
+        this.maxLightTime = this.data.lightTime;
+        this.remainingLightTime = this.maxLightTime;
+        this.gameOverTriggered = false;
+      },
+
+      updateHUD: function (message, color = "#33ff33") {
+        this.ui.setAttribute("value", message);
+        this.ui.setAttribute("color", color);
+      },
+
+      unlockAudio: function () {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+          if (!this.audioContext && AudioContextClass) {
+            this.audioContext = new AudioContextClass();
+          }
+
+          if (this.audioContext && this.audioContext.state === "suspended") {
+            this.audioContext.resume();
+          }
+
+          if (window.THREE && THREE.AudioContext) {
+            const threeContext = THREE.AudioContext.getContext();
+            if (threeContext.state === "suspended") {
+              threeContext.resume();
+            }
+          }
+        } catch (error) {
+          console.warn("Audio context could not be unlocked.", error);
+        }
+      },
+
+      playAmbient: function (audio, volume) {
+        if (!audio) return;
+
+        audio.muted = false;
+        audio.volume = volume;
+
+        const playback = audio.play();
+        if (playback) {
+          playback.catch(error => console.warn("Ambient audio failed:", audio.src, error));
+        }
+      },
+
+      playTone: function (frequency, duration, type, volume) {
+        if (!this.audioContext) return;
+
+        const oscillator = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+
+        oscillator.type = type || "sine";
+        oscillator.frequency.value = frequency;
+
+        gain.gain.setValueAtTime(volume || 0.08, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+          0.001,
+          this.audioContext.currentTime + duration
+        );
+
+        oscillator.connect(gain);
+        gain.connect(this.audioContext.destination);
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + duration);
+      },
+
+      endGame: function (message, color) {
+        this.updateHUD(message, color);
+
+        if (this.creepyAudio) this.creepyAudio.pause();
+        if (this.windAudio) this.windAudio.pause();
+        if (this.cricketsAudio) this.cricketsAudio.pause();
+
+        if (this.restartBtn) {
+          setTimeout(() => this.restartBtn.setAttribute("visible", true), 2500);
+        }
+      },
+
+      changeState: function (newState) {
+        this.el.setAttribute("game-manager", "state", newState);
+      },
+
+      tick: function (time, delta) {
+        if (this.data.state !== GAME_STATE.CRITICAL || this.gameOverTriggered) return;
+
+        this.remainingLightTime = Math.max(
+          0,
+          this.remainingLightTime - delta / 1000
+        );
+
+        const lightPercent = Math.ceil(
+          (this.remainingLightTime / this.maxLightTime) * 100
+        );
+
+        const secondsLeft = Math.ceil(this.remainingLightTime);
+
+        if (this.remainingLightTime <= 0) {
+          this.gameOverTriggered = true;
+          this.endGame("CONSUMED BY THE WOODS", "#ff0000");
+
+          document.querySelector("a-scene").setAttribute(
+            "fog",
+            "color: black; near: 0; far: 2"
+          );
+          return;
+        }
+
+        if (this.remainingLightTime <= 15) {
+          const flash = Math.floor(time / 250) % 2 === 0 ? "#ff0000" : "#ffffff";
+          this.updateHUD(
+            "THE DARKNESS IS HERE!\nTIME: " + secondsLeft +
+            "s\nLIGHT: " + lightPercent + "%",
+            flash
+          );
+        } else {
+          this.updateHUD(
+            "THE FOG IS CLOSING IN...\nTIME: " + secondsLeft +
+            "s\nLIGHT: " + lightPercent + "%",
+            "#ff8800"
+          );
+        }
+      },
+
+      triggerAction: function (targetId, el) {
+        if (targetId === "restart-btn") {
+          window.location.reload();
+          return;
+        }
+
+        if (
+          this.data.state === GAME_STATE.ESCAPED ||
+          this.remainingLightTime <= 0
+        ) return;
+
+        if (this.data.state === GAME_STATE.INTRO && targetId === "start-btn") {
+          this.handleIntro(el);
+        } else if (targetId.startsWith("rock") || targetId.startsWith("log")) {
+          this.handleObstacle(el);
+        } else if (targetId === "mushroom") {
+          this.handleMushroom(el);
+        } else if (targetId.startsWith("btn")) {
+          this.handleKeypad(targetId, el);
+        } else if (targetId === "exit-door") {
+          this.handleDoor();
+        }
+      },
+
+      handleIntro: function (el) {
+        this.changeState(GAME_STATE.CRITICAL);
+        el.setAttribute("visible", false);
+        el.setAttribute("position", "0 1000 0");
+
+        this.unlockAudio();
+        this.playAmbient(this.creepyAudio, 0.38);
+        this.playAmbient(this.windAudio, 0.3);
+        this.playAmbient(this.cricketsAudio, 0.18);
+
+        document.querySelector("a-scene").setAttribute(
+          "fog",
+          "type: linear; color: #020609; near: 2.5; far: 23"
+        );
+      },
+
+      handleObstacle: function (el) {
+        if (!el.body) return;
+
+        const force = new CANNON.Vec3(
+          (Math.random() - 0.5) * 15,
+          10,
+          (Math.random() - 0.5) * 15
+        );
+
+        el.body.applyImpulse(force, el.body.position);
+        this.updateHUD("PATH CLEARED", "#00ffff");
+      },
+
+      handleMushroom: function (el) {
+        if (this.data.state !== GAME_STATE.CRITICAL) return;
+
+        this.changeState(GAME_STATE.STABLE);
+        this.updateHUD("THE LIGHT IS RESTORED\nAWAKEN THE ANCIENT RUNES");
+
+        if (this.creepyAudio) this.creepyAudio.pause();
+
+        this.ambient.setAttribute("color", "#9fb7ff");
+        this.ambient.setAttribute("intensity", "0.45");
+        this.ambient.removeAttribute("flicker");
+
+        if (this.sporeTrail) this.sporeTrail.setAttribute("visible", false);
+        if (this.sporeLight) this.sporeLight.setAttribute("visible", false);
+
+        document.querySelector("a-scene").setAttribute(
+          "animation__clearfog",
+          "property: fog.far; to: 38; dur: 2500; easing: easeOutQuad"
+        );
+
+        ["btn1", "btn2", "btn3"].forEach((id, index) => {
+          const rune = document.getElementById(id);
+
+          rune.setAttribute("material", "emissive", "#ff4400");
+          rune.setAttribute("material", "emissiveIntensity", 0.5);
+          rune.setAttribute(
+            "animation__runeGlow",
+            "property: material.emissiveIntensity; from: 0.2; to: 1; " +
+            "dir: alternate; loop: true; dur: 900; delay: " + index * 200
+          );
+        });
+
+        this.absorbItem(el);
+      },
+
+      handleKeypad: function (targetId, el) {
+        if (this.data.state !== GAME_STATE.STABLE) return;
+
+        const expected = this.data.keypadCode[this.data.currentInput];
+
+        if (targetId === expected) {
+          this.data.currentInput++;
+          this.playTone(620, 0.12, "sine", 0.08);
+          el.setAttribute("material", "color", "#00ff00");
+
+          if (this.data.currentInput === 3) {
+            this.changeState(GAME_STATE.POWERED);
+            this.playTone(820, 0.35, "sine", 0.1);
+            setTimeout(() => this.playTone(1040, 0.45, "sine", 0.08), 180);
+
+            if (this.portal) this.portal.setAttribute("visible", true);
+
+            this.updateHUD("RUNES ACCEPTED\nENTER THE ARCHWAY", "#00ffff");
+          }
+        } else {
+          this.playTone(120, 0.4, "sawtooth", 0.09);
+          this.resetKeypad();
+        }
+      },
+
+      resetKeypad: function () {
+        this.data.currentInput = 0;
+        this.updateHUD("THE RUNES REJECT YOU.\nTRY AGAIN.", "#ff0000");
+
+        ["btn1", "btn2", "btn3"].forEach(id => {
+          document.getElementById(id).setAttribute("material", "color", "#ff3333");
+        });
+
+        setTimeout(() => {
+          if (this.data.state === GAME_STATE.STABLE) {
+            this.updateHUD("THE LIGHT IS RESTORED\nAWAKEN THE ANCIENT RUNES");
+          }
+        }, 1500);
+      },
+
+      handleDoor: function () {
+        if (this.data.state === GAME_STATE.POWERED) {
+          this.changeState(GAME_STATE.ESCAPED);
+          this.playTone(70, 1.4, "sine", 0.12);
+          this.endGame("YOU ESCAPED THE FOREST", "#00ffff");
+
+          this.door.setAttribute(
+            "animation",
+            "property: position; to: 0 -7 -11; dur: 5000; easing: easeInOutQuad"
+          );
+
+          document.querySelector("a-scene").setAttribute(
+            "animation__fog",
+            "property: fog.far; to: 4000; dur: 4000"
+          );
+        } else {
+          this.updateHUD("THE ARCHWAY IS SEALED\nFIND THE RUNES", "#ff3333");
+        }
+      },
+
+      absorbItem: function (el) {
+        const camPos = document.getElementById("cam").getAttribute("position");
+
+        if (el.hasAttribute("dynamic-body")) el.removeAttribute("dynamic-body");
+
+        el.removeAttribute("scannable");
+        el.removeAttribute("animation__scale");
+
+        el.setAttribute("animation", "property: scale; to: 0 0 0; dur: 1000");
+        el.setAttribute(
+          "animation__pos",
+          "property: position; to: " + camPos.x + " 1 " + camPos.z + "; dur: 1000"
+        );
+
+        setTimeout(() => el.remove(), 1000);
+      }
+    });
+
+    AFRAME.registerComponent("scannable", {
+      init: function () {
+        const uiPanelIds = ["start-btn", "restart-btn"];
+        const initialScale = this.el.getAttribute("scale") || { x: 1, y: 1, z: 1 };
+
+        this.baseScale = {
+          x: initialScale.x,
+          y: initialScale.y,
+          z: initialScale.z
+        };
+
+        this.el.addEventListener("click", () => {
+          const scene = document.querySelector("a-scene");
+          const manager = scene && scene.components["game-manager"];
+
+          if (manager) manager.triggerAction(this.el.id, this.el);
+        });
+
+        this.el.addEventListener("mouseenter", () => {
+          if (uiPanelIds.includes(this.el.id)) return;
+
+          this.el.setAttribute(
+            "animation__scale",
+            "property: scale; to: " +
+            this.baseScale.x * 1.08 + " " +
+            this.baseScale.y * 1.08 + " " +
+            this.baseScale.z * 1.08 +
+            "; dur: 200; easing: easeOutQuad"
+          );
+        });
+
+        this.el.addEventListener("mouseleave", () => {
+          if (uiPanelIds.includes(this.el.id)) return;
+
+          this.el.removeAttribute("animation__scale");
+          this.el.setAttribute(
+            "scale",
+            this.baseScale.x + " " + this.baseScale.y + " " + this.baseScale.z
+          );
+        });
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <div id="audio-gate">
+    <div class="panel">
+      <h1>THE WOODS ARE AWAKE</h1>
+      <p>THE SHADOWS ARE CLOSING IN.<br>FIND THE GLOWING SPORE TO SURVIVE.</p>
+      <button id="enter-forest" disabled>LOADING...</button>
+    </div>
+  </div>
+
+  <a-scene
+    physics="debug: false; gravity: -9.8"
+    renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; sortObjects: true"
+    background="color: #010305"
+    fog="type: linear; color: #020609; near: 1.5; far: 21"
+    shadow="type: pcfsoft"
+    game-manager
+    audio-gate>
+
+    <!-- Assets are cached once, then reused by every model instance. -->
+    <a-assets timeout="15000">
+      <a-asset-item id="tree-model" src="tree.glb"></a-asset-item>
+      <a-asset-item id="mushroom-model" src="mushroom.glb"></a-asset-item>
+      <a-asset-item id="rock-model" src="rock.glb"></a-asset-item>
+      <a-asset-item id="arch-model" src="archway.glb"></a-asset-item>
+      <a-asset-item id="log-model" src="log.glb"></a-asset-item>
+
+      <img id="ground-texture" src="forest-ground.jpg">
+
+      <audio id="snd-wind" src="wind.mp3" preload="auto" loop></audio>
+      <audio id="snd-creepy" src="creepy.mp3" preload="auto" loop></audio>
+      <audio id="snd-crickets" src="crickets.mp3" preload="auto" loop></audio>
+    </a-assets>
+
+    <!-- The sky and moon remain outside scene fog so the silhouette stays readable. -->
+    <a-sky
+      src="eso0932a.jpg"
+      rotation="0 95 0"
+      material="fog: false; color: #252d35">
+    </a-sky>
+
+    <a-sphere
+      src="moon.jpg"
+      radius="2.6"
+      position="-17 24 -42"
+      material="emissive: #c8d8ed; emissiveIntensity: 0.32; fog: false">
+    </a-sphere>
+
+    <!-- 1 A-Frame unit = 1 metre. A large ground plane prevents visible edges. -->
     <a-plane
-      id="start-btn"
-      position="0 0 -1.5"
-      width="4"
-      height="2"
-      color="#000000"
-      opacity="0.9"
-      scannable
-    >
-      <a-text
-        value="THE WOODS ARE AWAKE.\nTHE SHADOWS ARE CLOSING IN.\nFIND THE GLOWING SPORE TO SURVIVE.\n\n[ SCAN TO OPEN YOUR EYES ]"
-        align="center"
-        color="#ff8800"
-        scale="0.8 0.8 0.8"
-      ></a-text>
-    </a-plane>
-
-    <a-plane
-      id="restart-btn"
-      position="0 -1.3 -1.5"
-      width="4"
-      height="1.2"
-      color="#000000"
-      opacity="0.9"
-      visible="false"
-      scannable
-    >
-      <a-text
-        value="[ CLICK TO PLAY AGAIN ]"
-        align="center"
-        color="#ffaa00"
-        scale="0.7 0.7 0.7"
-      ></a-text>
-    </a-plane>
-
-    <a-text
-      id="hud-text"
-      value=""
-      align="center"
-      position="0 0.85 -2.8"
-      color="#ff3333"
-      width="4.5"
-      scale="0.75 0.75 0.75"
-      font="exo2bold"
-      material="
-        shader: flat;
-        depthTest: false;
-        transparent: true
-      "
-    ></a-text>
-
-    <a-entity
-      cursor="fuse: true; fuseTimeout: 1500"
-      raycaster="objects: [scannable]; far: 30"
-      position="0 0 -1"
-      geometry="
-        primitive: ring;
-        radiusInner: 0.02;
-        radiusOuter: 0.03
-      "
-      material="color: #ffaa00; shader: flat"
-      animation__fusing="
-        property: geometry.thetaLength;
-        startEvents: fusing;
-        from: 0;
-        to: 360;
-        dur: 1500
-      "
-      animation__reset="
-        property: geometry.thetaLength;
-        startEvents: mouseleave;
-        to: 0;
-        dur: 100
-      "
-    ></a-entity>
-  </a-camera>
-
-  <!-- ======================================================
-       SPORE TRAIL AND MUSHROOM
-       ====================================================== -->
-
-  <a-entity id="spore-trail">
-    <a-sphere
-      position="0 0.7 6"
-      radius="0.05"
-      material="
-        shader: flat;
-        color: #aaff77;
-        transparent: true;
-        opacity: 0.8
-      "
-      animation="
-        property: position;
-        to: 0 1.2 6;
-        dir: alternate;
-        loop: true;
-        dur: 1600
-      "
-    ></a-sphere>
-
-    <a-sphere
-      position="-0.8 0.9 5"
-      radius="0.04"
-      material="
-        shader: flat;
-        color: #ccff99;
-        transparent: true;
-        opacity: 0.7
-      "
-      animation="
-        property: position;
-        to: -0.8 1.4 5;
-        dir: alternate;
-        loop: true;
-        dur: 2100
-      "
-    ></a-sphere>
-
-    <a-sphere
-      position="-1.5 0.8 4"
-      radius="0.06"
-      material="
-        shader: flat;
-        color: #99ff66;
-        transparent: true;
-        opacity: 0.75
-      "
-      animation="
-        property: position;
-        to: -1.5 1.4 4;
-        dir: alternate;
-        loop: true;
-        dur: 1800
-      "
-    ></a-sphere>
-
-    <a-sphere
-      position="-2.3 1.1 3.4"
-      radius="0.04"
-      material="
-        shader: flat;
-        color: #bbff88;
-        transparent: true;
-        opacity: 0.7
-      "
-      animation="
-        property: position;
-        to: -2.3 1.6 3.4;
-        dir: alternate;
-        loop: true;
-        dur: 2300
-      "
-    ></a-sphere>
-
-    <a-sphere
-      position="-3.2 0.9 2.7"
-      radius="0.06"
-      material="
-        shader: flat;
-        color: #aaff77;
-        transparent: true;
-        opacity: 0.8
-      "
-      animation="
-        property: position;
-        to: -3.2 1.5 2.7;
-        dir: alternate;
-        loop: true;
-        dur: 1900
-      "
-    ></a-sphere>
-
-    <a-sphere
-      position="-4 1.1 2.2"
-      radius="0.05"
-      material="
-        shader: flat;
-        color: #ddffaa;
-        transparent: true;
-        opacity: 0.85
-      "
-      animation="
-        property: position;
-        to: -4 1.7 2.2;
-        dir: alternate;
-        loop: true;
-        dur: 1700
-      "
-    ></a-sphere>
-  </a-entity>
-
-  <a-light
-    id="spore-light"
-    type="point"
-    position="-4 1.3 2"
-    color="#99ff66"
-    intensity="1.15"
-    distance="6"
-    decay="2"
-  ></a-light>
-
-  <a-entity
-    id="mushroom"
-    gltf-model="#mushroom-model"
-    scale="0.17 0.17 0.17"
-    position="-4 0.42 2"
-    scannable
-    animation="
-      property: position;
-      to: -4 0.68 2;
-      dir: alternate;
-      loop: true;
-      dur: 2000
-    "
-  ></a-entity>
-
-  <!-- ======================================================
-       PHYSICS PUZZLE OBJECTS
-       Only these objects receive dynamic CANNON bodies.
-       ====================================================== -->
-
-  <a-entity
-    id="rock1"
-    gltf-model="#rock-model"
-    dynamic-body="mass: 5"
-    position="-3 0.28 0.6"
-    rotation="0 28 0"
-    scale="0.17 0.17 0.17"
-    shadow="cast: true; receive: true"
-    scannable
-  ></a-entity>
-
-  <a-entity
-    id="rock2"
-    gltf-model="#rock-model"
-    dynamic-body="mass: 5"
-    position="-5.2 0.24 1"
-    rotation="0 143 0"
-    scale="0.13 0.13 0.13"
-    shadow="cast: true; receive: true"
-    scannable
-  ></a-entity>
-
-  <a-entity
-    id="rock3"
-    gltf-model="#rock-model"
-    dynamic-body="mass: 5"
-    position="-5 0.28 3.5"
-    rotation="0 258 0"
-    scale="0.15 0.15 0.15"
-    shadow="cast: true; receive: true"
-    scannable
-  ></a-entity>
-
-  <a-entity
-    id="log1"
-    gltf-model="#log-model"
-    dynamic-body="mass: 8"
-    position="-2.4 0.22 2.8"
-    rotation="0 62 88"
-    scale="0.27 0.27 0.27"
-    shadow="cast: true; receive: true"
-    scannable
-  ></a-entity>
-
-  <!-- ======================================================
-       RUNE KEYPAD
-       IDs must remain btn1, btn2 and btn3.
-       ====================================================== -->
-
-  <a-entity position="4 1.1 -4" rotation="0 -25 0">
-    <a-box
-      id="btn1"
-      width="0.65"
-      height="0.65"
-      depth="0.45"
-      position="-0.9 0 0"
-      material="color: #ff3333; roughness: 0.9"
-      scannable
-    >
-      <a-text
-        value="1"
-        align="center"
-        position="0 0 0.24"
-        color="#ffffff"
-        scale="0.9 0.9 0.9"
-      ></a-text>
-    </a-box>
-
-    <a-box
-      id="btn2"
-      width="0.65"
-      height="0.65"
-      depth="0.45"
+      static-body
+      width="90"
+      height="90"
       position="0 0 0"
-      material="color: #ff3333; roughness: 0.9"
-      scannable
-    >
-      <a-text
-        value="2"
-        align="center"
-        position="0 0 0.24"
-        color="#ffffff"
-        scale="0.9 0.9 0.9"
-      ></a-text>
-    </a-box>
+      rotation="-90 0 0"
+      material="src: #ground-texture; repeat: 24 24; roughness: 1; metalness: 0; color: #344039"
+      shadow="receive: true">
+    </a-plane>
 
-    <a-box
-      id="btn3"
-      width="0.65"
-      height="0.65"
-      depth="0.45"
-      position="0.9 0 0"
-      material="color: #ff3333; roughness: 0.9"
-      scannable
-    >
+    <!-- Invisible world limits: unchanged physics strategy, just a larger enclosure. -->
+    <a-plane static-body width="34" height="8" position="-17 4 0" rotation="0 90 0" visible="false"></a-plane>
+    <a-plane static-body width="34" height="8" position="17 4 0" rotation="0 -90 0" visible="false"></a-plane>
+    <a-plane static-body width="34" height="8" position="0 4 17" rotation="0 180 0" visible="false"></a-plane>
+    <a-plane static-body width="34" height="8" position="0 4 -17" visible="false"></a-plane>
+
+    <!-- Low-key moonlight. The ambient-light id is required by game-manager. -->
+    <a-light id="ambient-light" type="ambient" intensity="0.16" color="#405067" flicker></a-light>
+    <a-light
+      type="directional"
+      color="#8da8cb"
+      intensity="0.42"
+      position="-12 24 -18"
+      cast-shadow="true"
+      shadow-camera-far="55"
+      shadow-camera-left="-18"
+      shadow-camera-right="18"
+      shadow-camera-top="18"
+      shadow-camera-bottom="-18">
+    </a-light>
+
+    <!--
+      FOREST COMPOSITION
+      The playable trail runs roughly from z=8 to z=-11. Trees are arranged in
+      staggered clusters, not a ring. Scale variance is restrained so the forest
+      feels natural without making the source model look randomly deformed.
+    -->
+    <a-entity id="forest-environment">
+      <!-- Near left bank: these trees frame the player and cast local shadows. -->
+      <a-entity gltf-model="#tree-model" natural-sway position="-5.8 0 9.2" rotation="0 18 0" scale="2.75 2.75 2.75" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-3.9 0 6.0" rotation="0 72 0" scale="2.30 2.30 2.30" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-6.6 0 3.8" rotation="0 141 0" scale="3.05 3.05 3.05" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-5.1 0 0.1" rotation="0 224 0" scale="2.55 2.55 2.55" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-7.0 0 -2.8" rotation="0 309 0" scale="3.20 3.20 3.20" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-4.7 0 -6.0" rotation="0 36 0" scale="2.40 2.40 2.40" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-6.3 0 -9.0" rotation="0 188 0" scale="2.90 2.90 2.90" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-4.1 0 -12.6" rotation="0 264 0" scale="2.25 2.25 2.25" shadow="cast: true; receive: true"></a-entity>
+
+      <!-- Near right bank: intentionally asymmetric; leaves space for the rune wall. -->
+      <a-entity gltf-model="#tree-model" natural-sway position="4.9 0 9.6" rotation="0 331 0" scale="2.60 2.60 2.60" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="3.8 0 6.4" rotation="0 201 0" scale="2.25 2.25 2.25" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="6.4 0 3.4" rotation="0 96 0" scale="3.05 3.05 3.05" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="7.2 0 -0.2" rotation="0 149 0" scale="2.70 2.70 2.70" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="7.0 0 -5.5" rotation="0 241 0" scale="3.15 3.15 3.15" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="4.9 0 -8.0" rotation="0 24 0" scale="2.35 2.35 2.35" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="6.5 0 -11.4" rotation="0 117 0" scale="2.85 2.85 2.85" shadow="cast: true; receive: true"></a-entity>
+
+      <!-- Outer fog layers: high density at low shadow cost adds depth. -->
+      <a-entity gltf-model="#tree-model" natural-sway position="-11.6 0 12.0" rotation="0 58 0" scale="3.35 3.35 3.35"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-10.2 0 6.9" rotation="0 173 0" scale="2.95 2.95 2.95"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-12.6 0 1.0" rotation="0 278 0" scale="3.25 3.25 3.25"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-10.8 0 -5.0" rotation="0 11 0" scale="2.80 2.80 2.80"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-11.5 0 -11.5" rotation="0 207 0" scale="3.40 3.40 3.40"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="11.3 0 12.7" rotation="0 299 0" scale="3.15 3.15 3.15"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="10.1 0 7.1" rotation="0 83 0" scale="2.85 2.85 2.85"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="12.7 0 1.8" rotation="0 194 0" scale="3.30 3.30 3.30"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="10.8 0 -4.0" rotation="0 344 0" scale="2.90 2.90 2.90"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="11.7 0 -10.8" rotation="0 132 0" scale="3.35 3.35 3.35"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="-2.8 0 -15.2" rotation="0 51 0" scale="2.70 2.70 2.70"></a-entity>
+      <a-entity gltf-model="#tree-model" natural-sway position="3.2 0 -15.8" rotation="0 228 0" scale="3.10 3.10 3.10"></a-entity>
+
+      <!-- Non-interactive deadfall and stones: visual only, avoiding extra CANNON bodies. -->
+      <a-entity gltf-model="#log-model" position="6.2 0.18 7.1" rotation="4 38 84" scale="0.30 0.30 0.30" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#log-model" position="-7.4 0.20 -4.6" rotation="-3 122 88" scale="0.28 0.28 0.28" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#log-model" position="8.0 0.16 -9.1" rotation="6 244 82" scale="0.24 0.24 0.24" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#rock-model" position="5.7 0.17 4.5" rotation="8 27 -4" scale="0.16 0.16 0.16" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#rock-model" position="-6.5 0.20 7.5" rotation="-4 136 6" scale="0.20 0.20 0.20" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#rock-model" position="7.8 0.14 -1.9" rotation="6 219 -3" scale="0.13 0.13 0.13" shadow="cast: true; receive: true"></a-entity>
+      <a-entity gltf-model="#rock-model" position="-5.3 0.15 -8.0" rotation="2 304 5" scale="0.14 0.14 0.14" shadow="cast: true; receive: true"></a-entity>
+    </a-entity>
+
+    <!-- Rune clue and exit remain at their original gameplay coordinates. -->
+    <a-text
+      value="ANCIENT RUNES:\n3 - 1 - 2"
+      position="4 2.6 -4"
+      rotation="0 -25 0"
+      color="#ffaa00"
+      align="center"
+      scale="1.1 1.1 1.1">
+    </a-text>
+
+    <a-entity
+      id="exit-door"
+      gltf-model="#arch-model"
+      shadow="cast: true; receive: true"
+      position="0 0 -11"
+      scale="1.42 1.42 1.42"
+      scannable>
+    </a-entity>
+
+    <a-circle
+      id="portal-glow"
+      position="0 2.5 -10.8"
+      radius="2.15"
+      visible="false"
+      material="shader: flat; color: #66ffff; transparent: true; opacity: 0.15; side: double"
+      animation__portalPulse="property: material.opacity; from: 0.15; to: 0.7; dir: alternate; loop: true; dur: 1200">
+    </a-circle>
+
+    <!-- Camera/HUD IDs and interaction attributes are unchanged for game-manager. -->
+    <a-camera id="cam" position="0 1.6 8">
+      <a-light type="point" color="#7896bd" intensity="0.16" distance="8" decay="2"></a-light>
+
+      <a-plane
+        id="start-btn"
+        position="0 0 -1.5"
+        width="4"
+        height="2"
+        color="#000"
+        opacity="0.9"
+        scannable>
+        <a-text
+          value="THE WOODS ARE AWAKE.\nTHE SHADOWS ARE CLOSING IN.\nFIND THE GLOWING SPORE TO SURVIVE.\n\n[ SCAN TO OPEN YOUR EYES ]"
+          align="center"
+          color="#ff8800"
+          scale="0.8 0.8 0.8">
+        </a-text>
+      </a-plane>
+
+      <a-plane
+        id="restart-btn"
+        position="0 -1.3 -1.5"
+        width="4"
+        height="1.2"
+        color="#000"
+        opacity="0.9"
+        visible="false"
+        scannable>
+        <a-text
+          value="[ CLICK TO PLAY AGAIN ]"
+          align="center"
+          color="#ffaa00"
+          scale="0.7 0.7 0.7">
+        </a-text>
+      </a-plane>
+
       <a-text
-        value="3"
+        id="hud-text"
+        value=""
         align="center"
-        position="0 0 0.24"
-        color="#ffffff"
-        scale="0.9 0.9 0.9"
-      ></a-text>
-    </a-box>
-  </a-entity>
-</a-scene>
+        position="0 0.85 -2.8"
+        color="#ff3333"
+        width="4.5"
+        scale="0.75 0.75 0.75"
+        font="exo2bold"
+        material="shader: flat; depthTest: false; transparent: true">
+      </a-text>
+
+      <a-entity
+        cursor="fuse: true; fuseTimeout: 1500"
+        raycaster="objects: [scannable]; far: 30"
+        position="0 0 -1"
+        geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+        material="color: #ffaa00; shader: flat"
+        animation__fusing="property: geometry.thetaLength; startEvents: fusing; from: 0; to: 360; dur: 1500"
+        animation__reset="property: geometry.thetaLength; startEvents: mouseleave; to: 0; dur: 100">
+      </a-entity>
+    </a-camera>
+
+    <!-- The guiding spores keep their state-machine IDs and form a visible trail. -->
+    <a-entity id="spore-trail">
+      <a-sphere position="0 0.7 6" radius="0.05" material="shader: flat; color: #aaff77; transparent: true; opacity: 0.8" animation="property: position; to: 0 1.2 6; dir: alternate; loop: true; dur: 1600"></a-sphere>
+      <a-sphere position="-0.8 0.9 5" radius="0.04" material="shader: flat; color: #ccff99; transparent: true; opacity: 0.7" animation="property: position; to: -0.8 1.4 5; dir: alternate; loop: true; dur: 2100"></a-sphere>
+      <a-sphere position="-1.5 0.8 4" radius="0.06" material="shader: flat; color: #99ff66; transparent: true; opacity: 0.75" animation="property: position; to: -1.5 1.4 4; dir: alternate; loop: true; dur: 1800"></a-sphere>
+      <a-sphere position="-2.3 1.1 3.4" radius="0.04" material="shader: flat; color: #bbff88; transparent: true; opacity: 0.7" animation="property: position; to: -2.3 1.6 3.4; dir: alternate; loop: true; dur: 2300"></a-sphere>
+      <a-sphere position="-3.2 0.9 2.7" radius="0.06" material="shader: flat; color: #aaff77; transparent: true; opacity: 0.8" animation="property: position; to: -3.2 1.5 2.7; dir: alternate; loop: true; dur: 1900"></a-sphere>
+      <a-sphere position="-4 1.1 2.2" radius="0.05" material="shader: flat; color: #ddffaa; transparent: true; opacity: 0.85" animation="property: position; to: -4 1.7 2.2; dir: alternate; loop: true; dur: 1700"></a-sphere>
+    </a-entity>
+
+    <a-light id="spore-light" type="point" position="-4 1.3 2" color="#99ff66" intensity="1.15" distance="6" decay="2"></a-light>
+
+    <a-entity
+      id="mushroom"
+      gltf-model="#mushroom-model"
+      scale="0.17 0.17 0.17"
+      position="-4 0.42 2"
+      scannable
+      animation="property: position; to: -4 0.68 2; dir: alternate; loop: true; dur: 2000">
+    </a-entity>
+
+    <!-- Only puzzle obstacles use dynamic-body; decorative props above stay visual-only. -->
+    <a-entity id="rock1" gltf-model="#rock-model" dynamic-body="mass: 5" position="-3.0 0.28 0.6" rotation="0 28 0" scale="0.17 0.17 0.17" shadow="cast: true; receive: true" scannable></a-entity>
+    <a-entity id="rock2" gltf-model="#rock-model" dynamic-body="mass: 5" position="-5.2 0.24 1.0" rotation="0 143 0" scale="0.13 0.13 0.13" shadow="cast: true; receive: true" scannable></a-entity>
+    <a-entity id="rock3" gltf-model="#rock-model" dynamic-body="mass: 5" position="-5.0 0.28 3.5" rotation="0 258 0" scale="0.15 0.15 0.15" shadow="cast: true; receive: true" scannable></a-entity>
+    <a-entity id="log1" gltf-model="#log-model" dynamic-body="mass: 8" position="-2.4 0.22 2.8" rotation="0 62 88" scale="0.27 0.27 0.27" shadow="cast: true; receive: true" scannable></a-entity>
+
+    <!-- Rune keypad: IDs and order remain exactly as expected by keypadCode. -->
+    <a-entity position="4 1.1 -4" rotation="0 -25 0">
+      <a-box id="btn1" width="0.65" height="0.65" depth="0.45" position="-0.9 0 0" material="color: #ff3333; roughness: 0.9" scannable>
+        <a-text value="1" align="center" position="0 0 0.24" color="white" scale="0.9 0.9 0.9"></a-text>
+      </a-box>
+      <a-box id="btn2" width="0.65" height="0.65" depth="0.45" position="0 0 0" material="color: #ff3333; roughness: 0.9" scannable>
+        <a-text value="2" align="center" position="0 0 0.24" color="white" scale="0.9 0.9 0.9"></a-text>
+      </a-box>
+      <a-box id="btn3" width="0.65" height="0.65" depth="0.45" position="0.9 0 0" material="color: #ff3333; roughness: 0.9" scannable>
+        <a-text value="3" align="center" position="0 0 0.24" color="white" scale="0.9 0.9 0.9"></a-text>
+      </a-box>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
