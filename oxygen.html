@@ -7,6 +7,27 @@
   <script>
     var locked = true, power = false, gas = true, message = "", time = 6000;
 
+    function fadeOutSound(id, duration) {
+      var soundEl = document.getElementById(id);
+      var sound = soundEl.components.sound;
+      var originalVolume = soundEl.getAttribute('sound').volume;
+      var startedAt = performance.now();
+
+      function fade(now) {
+        var progress = Math.min((now - startedAt) / duration, 1);
+        soundEl.setAttribute('sound', 'volume', originalVolume * (1 - progress));
+
+        if (progress < 1) {
+          requestAnimationFrame(fade);
+        } else {
+          sound.stopSound();
+          soundEl.setAttribute('sound', 'volume', originalVolume);
+        }
+      }
+
+      requestAnimationFrame(fade);
+    }
+
     AFRAME.registerComponent('updating', {
       tick: function () {
         if (gas) time--;
@@ -88,6 +109,55 @@
       }
     });
 
+    AFRAME.registerComponent('low-oxygen-vignette', {
+      init: function () {
+        var canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        var context = canvas.getContext('2d');
+        var gradient = context.createRadialGradient(256, 256, 105, 256, 256, 355);
+        gradient.addColorStop(0, 'rgba(80, 0, 8, 0)');
+        gradient.addColorStop(0.58, 'rgba(90, 0, 8, 0.08)');
+        gradient.addColorStop(1, 'rgba(120, 0, 10, 0.95)');
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 512, 512);
+
+        var texture = new THREE.CanvasTexture(canvas);
+        var geometry = new THREE.PlaneGeometry(2.45, 1.4);
+        var material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 0,
+          depthTest: false,
+          depthWrite: false
+        });
+
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.set(0, 0, -0.52);
+        this.mesh.renderOrder = 999;
+        this.mesh.raycast = function () {};
+        this.currentOpacity = 0;
+        this.el.setObject3D('vignette', this.mesh);
+      },
+
+      tick: function (timeNow) {
+        if (!this.mesh) return;
+        var lowOxygen = gas && time <= 2000;
+        var target = lowOxygen ? Math.min(0.38, 0.08 + ((2000 - time) / 2000) * 0.3) : 0;
+        this.currentOpacity += (target - this.currentOpacity) * 0.06;
+        var pulse = lowOxygen ? 0.9 + Math.sin(timeNow * 0.006) * 0.1 : 1;
+        this.mesh.material.opacity = this.currentOpacity * pulse;
+      },
+
+      remove: function () {
+        if (!this.mesh) return;
+        this.mesh.material.map.dispose();
+        this.mesh.material.dispose();
+        this.mesh.geometry.dispose();
+        this.el.removeObject3D('vignette');
+      }
+    });
+
     AFRAME.registerComponent('steam-burst', {
       init: function () {
         var el = this.el;
@@ -129,7 +199,7 @@
           if (el.id == "door") {
             if (!locked && time >= 0) {
               el.components.sound.playSound();
-              document.getElementById('creepy').components.sound.stopSound();
+              fadeOutSound('creepy', 1600);
               message = "Mission Accomplished! You Escaped!";
               gas = false;
               document.getElementById('airlock-steam').emit('activate');
@@ -228,6 +298,7 @@
     </a-entity>
 
     <a-camera id="cam" position="0 2.4 10">
+      <a-entity low-oxygen-vignette></a-entity>
       <a-entity id="title-card" position="0 0 -1.45" non-interactive>
         <a-plane width="2.9" height="0.72" material="color: #020814; shader: flat; transparent: true; opacity: 0" animation__panelin="property: material.opacity; from: 0; to: 0.78; dur: 900; delay: 150" animation__panelout="property: material.opacity; from: 0.78; to: 0; dur: 900; delay: 3100"></a-plane>
         <a-text value="ORBITAL LOCKDOWN\nRestore oxygen and escape." align="center" position="0 0 0.01" color="#bcefff" width="2.65" opacity="0" animation__titlein="property: text.opacity; from: 0; to: 1; dur: 900; delay: 250" animation__titleout="property: text.opacity; from: 1; to: 0; dur: 900; delay: 3000"></a-text>
