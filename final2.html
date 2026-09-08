@@ -125,8 +125,10 @@
         this.setPhase(PHASE.CRITICAL);
         this.playSound(400, "square", 0.3);
         
+        // Κρύβουμε και απενεργοποιούμε εντελώς το start-btn
         this.startBtn.setAttribute("visible", false);
         this.startBtn.classList.remove("interactable");
+        this.startBtn.setAttribute("scale", "0 0 0"); 
         
         this.ambient.setAttribute("light", "color", "#45111e");
         this.ambient.setAttribute("light", "intensity", 0.22);
@@ -271,6 +273,7 @@
       }
     });
 
+    // Η ΛΥΣΗ: Το scale αλλάζει σταθερά, χωρίς "loop: true", για να μην μπερδεύεται το σκανάρισμα!
     AFRAME.registerComponent("interactable", {
       init: function () {
         this.el.addEventListener("click", () => {
@@ -282,12 +285,11 @@
         
         this.el.addEventListener("mouseenter", () => {
           if (this.el.classList.contains("interactable")) {
-            this.el.setAttribute("animation__scale", "property: scale; to: 1.1 1.1 1.1; dur: 200; dir: alternate; loop: true");
+            this.el.setAttribute("scale", "1.1 1.1 1.1");
           }
         });
         
         this.el.addEventListener("mouseleave", () => {
-          this.el.removeAttribute("animation__scale");
           this.el.setAttribute("scale", "1 1 1");
         });
       }
@@ -316,7 +318,7 @@
     <a-plane width="30" height="10" position="0 5 -15" material="color: #0b111b; metalness: 0.75"></a-plane>
     <a-plane width="30" height="30" position="0 10 0" rotation="90 0 0" material="color: #080c13; metalness: 0.9"></a-plane>
 
-    <!-- Το κεντρικό UI βρίσκεται πλέον στον χώρο μπροστά από τον παίκτη, ΟΧΙ στην κάμερα! -->
+    <!-- UI Container στον τρισδιάστατο χώρο -->
     <a-entity id="ui-container" position="0 2.4 7">
       <a-text id="objective" value="" align="center" position="0 1.2 0" color="#acdff2" width="5"></a-text>
       <a-text id="hud" value="" align="center" position="0 0.5 0" color="#9dfcff" width="5"></a-text>
@@ -325,7 +327,7 @@
         <a-text value="[ SCAN TO START ]" align="center" color="#83fff4" width="3.5"></a-text>
       </a-plane>
 
-      <a-plane id="replay-btn" class="interactable" visible="false" position="0 -0.4 0" width="2.5" height="0.6" material="color: #153b44; emissive: #15616a; emissiveIntensity: 0.8">
+      <a-plane id="replay-btn" visible="false" position="0 -0.4 0" width="2.5" height="0.6" material="color: #153b44; emissive: #15616a; emissiveIntensity: 0.8">
         <a-text value="[ SCAN TO REPLAY ]" align="center" color="#8afff1" width="3.5"></a-text>
       </a-plane>
     </a-entity>
@@ -372,12 +374,13 @@
     </a-entity>
 
     <a-camera id="camera" position="0 2.4 10" wasd-controls="acceleration: 28">
-      <a-entity cursor="fuse: true; fuseTimeout: 1200"
+      <!-- Κλασικός Gaze Cursor (Ο χρόνος μειώθηκε στα 1000ms για να είναι πιο γρήγορο το σκανάρισμα) -->
+      <a-entity cursor="fuse: true; fuseTimeout: 1000"
                 raycaster="objects: .interactable; far: 30"
                 position="0 0 -1"
                 geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
                 material="color: #74fff1; shader: flat"
-                animation__fusing="property: geometry.thetaLength; startEvents: fusing; from: 0; to: 360; dur: 1200"
+                animation__fusing="property: geometry.thetaLength; startEvents: fusing; from: 0; to: 360; dur: 1000"
                 animation__reset="property: geometry.thetaLength; startEvents: mouseleave; to: 0; dur: 100">
       </a-entity>
     </a-camera>
