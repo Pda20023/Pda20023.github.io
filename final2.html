@@ -7,7 +7,6 @@
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   
   <script>
-    // Απλό State Machine (χωρίς Object.freeze κλπ)
     const PHASE = {
       BRIEFING: "briefing", 
       CRITICAL: "critical", 
@@ -17,7 +16,6 @@
       LOST: "lost"
     };
 
-    // Εφέ που αναβοσβήνει το φως (πολύ συνηθισμένο σε εργασίες A-Frame)
     AFRAME.registerComponent("pulse-light", {
       schema: {min: {default: 0.25}, max: {default: 0.75}, speed: {default: 1}},
       tick: function (time) {
@@ -26,7 +24,6 @@
       }
     });
 
-    // Ο κεντρικός διαχειριστής του παιχνιδιού
     AFRAME.registerComponent("orbital-game", {
       schema: {
         phase: {type: "string", default: PHASE.BRIEFING},
@@ -46,7 +43,6 @@
         this.replay = document.querySelector("#replay-btn");
         this.startBtn = document.querySelector("#start-btn");
         
-        // Ήχοι
         this.sndAlarm = document.querySelector("#snd-alarm");
         this.sndDoor = document.querySelector("#snd-door");
         
@@ -59,7 +55,6 @@
       tick: function (time, delta) {
         if (this.data.phase !== PHASE.CRITICAL) return;
         
-        // Χρήση Delta time για σωστό χρονόμετρο
         this.data.oxygen = Math.max(0, this.data.oxygen - delta / 1000);
         
         const seconds = Math.ceil(this.data.oxygen);
@@ -84,7 +79,6 @@
         this.objective.setAttribute("value", "OBJECTIVE  //  " + text);
       },
       
-      // Όταν ο παίκτης κοιτάει/κλικάρει κάτι
       act: function (id, el) {
         if (id === "replay-btn") return window.location.reload();
         if (id === "start-btn") return this.start();
@@ -103,7 +97,6 @@
         
         this.setPhase(PHASE.CRITICAL);
         
-        // Κρύβουμε το κουμπί start και αφαιρούμε την κλάση για να μην το ξαναχτυπήσει ο raycaster
         this.startBtn.setAttribute("visible", false);
         this.startBtn.classList.remove("interactable");
         
@@ -119,7 +112,7 @@
         if (this.data.phase !== PHASE.CRITICAL || el.dataset.opened) return;
         
         el.dataset.opened = "true";
-        el.classList.remove("interactable"); // Δεν μπορεί να ξανανοίξει
+        el.classList.remove("interactable");
         
         this.data.salvage++;
         this.data.oxygen = Math.min(90, this.data.oxygen + 5);
@@ -163,7 +156,6 @@
         
         this.codeUnlocked = true;
         
-        // Κλειδώνουμε το πληκτρολόγιο
         ["btn1", "btn2", "btn3"].forEach(btnId => {
           document.querySelector("#" + btnId).classList.remove("interactable");
         });
@@ -249,7 +241,6 @@
       }
     });
 
-    // Απλός μηχανισμός interaction (Hover + Click)
     AFRAME.registerComponent("interactable", {
       init: function () {
         this.el.addEventListener("click", () => {
@@ -341,22 +332,19 @@
       </a-entity>
     </a-entity>
 
-    <!-- Κάμερα και Κλασικό UI/Cursor για αρχάριους -->
     <a-camera id="camera" position="0 2.4 10" wasd-controls="acceleration: 28">
       
       <a-text id="objective" value="" align="center" position="0 1.5 -2.6" color="#acdff2" width="3.6"></a-text>
       <a-text id="hud" value="" align="center" position="0 0.65 -2.6" color="#9dfcff" width="3.6"></a-text>
       
-      <!-- Κουμπί Start μέσα στο VR -->
-      <a-plane id="start-btn" class="interactable" interactable position="0 -0.4 -2.6" width="2.5" height="0.6" material="color: #0b2635; emissive: #135066; emissiveIntensity: 0.8">
+      <a-plane id="start-btn" class="interactable" interactable position="0 0 -2.6" width="2.5" height="0.6" material="color: #0b2635; emissive: #135066; emissiveIntensity: 0.8">
         <a-text value="[ SCAN TO START ]" align="center" color="#83fff4" width="3.5"></a-text>
       </a-plane>
 
-      <a-plane id="replay-btn" visible="false" position="0 -0.4 -2.6" width="2.5" height="0.6" material="color: #153b44; emissive: #15616a; emissiveIntensity: 0.8">
+      <a-plane id="replay-btn" visible="false" position="0 0 -2.6" width="2.5" height="0.6" material="color: #153b44; emissive: #15616a; emissiveIntensity: 0.8">
         <a-text value="[ SCAN TO REPLAY ]" align="center" color="#8afff1" width="3.5"></a-text>
       </a-plane>
       
-      <!-- Κλασικός Gaze Cursor (Στοχεύει μόνο αντικείμενα με class="interactable") -->
       <a-entity cursor="fuse: true; fuseTimeout: 1200"
                 raycaster="objects: .interactable; far: 30"
                 position="0 0 -1"
