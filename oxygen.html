@@ -16,7 +16,12 @@
           this.el.setAttribute('value', message);
           this.el.setAttribute('color', 'red');
         } else {
-          this.el.setAttribute('value', 'OXYGEN: ' + Math.round(time / 100) + '%\nFind the blue Stabilizer');
+          var objective = !power
+            ? 'Find the blue Stabilizer'
+            : locked
+              ? 'Power restored - activate the keypad'
+              : 'Airlock unlocked - escape!';
+          this.el.setAttribute('value', 'OXYGEN: ' + Math.round(time / 100) + '%\n' + objective);
         }
 
         var pos = document.getElementById('cam').getAttribute('position');
@@ -46,6 +51,7 @@
             if (power) {
               locked = false;
               el.setAttribute('material', 'color: #4dff9a');
+              document.getElementById('keypad-label').setAttribute('value', 'UNLOCKED');
             }
             return;
           }
@@ -58,6 +64,11 @@
               gas = false;
               document.getElementById('alarm').components.sound.stopSound();
               document.getElementById('ambient').setAttribute('light', 'color', '#19a8be');
+              var emergency = document.getElementById('emergency');
+              emergency.removeAttribute('animation__pulse');
+              emergency.setAttribute('light', 'color', '#19a8be');
+              emergency.setAttribute('light', 'intensity', 0.8);
+              document.getElementById('keypad-label').setAttribute('value', 'READY');
             } else if (el.id == "tank") {
               time += 3000;
             }
@@ -77,6 +88,7 @@
     </a-assets>
 
     <a-entity id="alarm" sound="src: #snd-alarm; autoplay: true; loop: true"></a-entity>
+    <a-light id="emergency" type="point" color="#ff2438" intensity="0.35" distance="30" position="0 8 0" animation__pulse="property: light.intensity; from: 0.2; to: 1.8; dur: 650; dir: alternate; loop: true; easing: easeInOutSine"></a-light>
 
     <a-light id="ambient" type="ambient" color="#152342" intensity="0.32"></a-light>
     <a-light type="point" color="#32b9ff" intensity="1.4" distance="13" position="0 7 5"></a-light>
@@ -104,7 +116,7 @@
     <a-entity position="6 0 -6" rotation="0 -28 0">
       <a-box width="3.4" height="2.4" depth="1" position="0 1.2 0" material="color: #192536"></a-box>
       <a-box id="keypad" width="0.8" height="0.8" depth="0.12" position="0 1.2 0.55" material="color: #ff5268" focusing>
-        <a-text value="HACK" align="center" position="0 0 0.1"></a-text>
+        <a-text id="keypad-label" value="NO POWER" align="center" position="0 0 0.1" color="#ffffff" width="3"></a-text>
       </a-box>
     </a-entity>
 
