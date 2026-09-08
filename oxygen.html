@@ -7,27 +7,6 @@
   <script>
     var locked = true, power = false, gas = true, ended = false, message = "", time = 6000;
 
-    function fadeOutSound(id, duration) {
-      var soundEl = document.getElementById(id);
-      var sound = soundEl.components.sound;
-      var originalVolume = soundEl.getAttribute('sound').volume;
-      var startedAt = performance.now();
-
-      function fade(now) {
-        var progress = Math.min((now - startedAt) / duration, 1);
-        soundEl.setAttribute('sound', 'volume', originalVolume * (1 - progress));
-
-        if (progress < 1) {
-          requestAnimationFrame(fade);
-        } else {
-          sound.stopSound();
-          soundEl.setAttribute('sound', 'volume', originalVolume);
-        }
-      }
-
-      requestAnimationFrame(fade);
-    }
-
     function finishGame() {
       var cam = document.getElementById('cam');
       cam.setAttribute('wasd-controls', 'enabled', false);
@@ -245,6 +224,56 @@
       }
     });
 
+    AFRAME.registerComponent('starfield-window', {
+      init: function () {
+        var canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        var context = canvas.getContext('2d');
+        context.fillStyle = '#01020a';
+        context.fillRect(0, 0, 512, 512);
+
+        for (var i = 0; i < 240; i++) {
+          var x = Math.random() * 512;
+          var y = Math.random() * 512;
+          var radius = Math.random() * 1.5 + 0.35;
+          var alpha = Math.random() * 0.55 + 0.45;
+          var blue = Math.random() > 0.72;
+          context.beginPath();
+          context.arc(x, y, radius, 0, Math.PI * 2);
+          context.fillStyle = blue
+            ? 'rgba(145, 215, 255, ' + alpha + ')'
+            : 'rgba(255, 255, 255, ' + alpha + ')';
+          context.fill();
+        }
+
+        var texture = new THREE.CanvasTexture(canvas);
+        var geometry = new THREE.PlaneGeometry(6.8, 7.8);
+        var material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 1
+        });
+
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.raycast = function () {};
+        this.el.setObject3D('starfield', this.mesh);
+      },
+
+      tick: function (timeNow) {
+        if (!this.mesh) return;
+        this.mesh.material.opacity = 0.94 + Math.sin(timeNow * 0.0015) * 0.06;
+      },
+
+      remove: function () {
+        if (!this.mesh) return;
+        this.mesh.material.map.dispose();
+        this.mesh.material.dispose();
+        this.mesh.geometry.dispose();
+        this.el.removeObject3D('starfield');
+      }
+    });
+
     AFRAME.registerComponent('obstacle-collision', {
       schema: {
         radius: {default: 0.5}
@@ -291,10 +320,11 @@
           if (el.id == "door") {
             if (!locked && time >= 0) {
               el.components.sound.playSound();
-              fadeOutSound('creepy', 1600);
+              document.getElementById('creepy').components.sound.stopSound();
               message = "Mission Accomplished! You Escaped!";
               gas = false;
               ended = true;
+              document.getElementById('starfield').setAttribute('visible', true);
               document.getElementById('airlock-steam').emit('activate');
               setTimeout(finishGame, 3000);
               var flash = document.getElementById('victory-flash');
@@ -372,6 +402,8 @@
     <a-box class="obstacle" width="1.8" height="1.8" depth="1.8" position="-2.5 0.9 -7.5" material="color: #2b3d50; metalness: 0.78; roughness: 0.5"></a-box>
     <a-box class="obstacle" width="2.5" height="2.5" depth="2.5" position="3.5 1.25 -10" material="color: #25384b; metalness: 0.82; roughness: 0.45"></a-box>
     <a-box class="obstacle" width="1.5" height="1.5" depth="1.5" position="10.5 0.75 8" material="color: #37495c; metalness: 0.68; roughness: 0.58"></a-box>
+
+    <a-entity id="starfield" position="0 4 -14.92" visible="false" starfield-window></a-entity>
 
     <a-entity id="door" position="0 4 -14.6" sound="src: #snd-door" focusing>
       <a-box width="7" height="8" depth="0.55" material="color: #142431; metalness: 0.8"></a-box>
