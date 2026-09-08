@@ -34,7 +34,9 @@
 
     AFRAME.registerComponent("interactable", {
       init: function () {
-        this.baseScale = this.el.getAttribute("scale") || { x: 1, y: 1, z: 1 };
+        this.baseScale =
+          this.el.getAttribute("scale") || { x: 1, y: 1, z: 1 };
+
         this.el.classList.add("interactable");
 
         this.el.addEventListener("click", () => {
@@ -81,6 +83,7 @@
         this.ambient = document.querySelector("#ambient");
         this.shield = document.querySelector("#crystal-shield");
         this.replay = document.querySelector("#replay-btn");
+
         this.codeUnlocked = false;
         this.alarmTimer = null;
         this.audio = null;
@@ -89,15 +92,20 @@
           "INCOMING TRANSMISSION\nSTATION ORBITAL-07 IS FAILING",
           "#ff5268"
         );
+
         this.setObjective("Click START MISSION to begin.");
       },
 
       tick: function (time, delta) {
         if (this.data.phase !== PHASE.CRITICAL) return;
 
-        this.data.oxygen = Math.max(0, this.data.oxygen - delta / 1000);
+        this.data.oxygen = Math.max(
+          0,
+          this.data.oxygen - delta / 1000
+        );
 
         const seconds = Math.ceil(this.data.oxygen);
+
         const color =
           seconds <= 15 && Math.floor(time / 220) % 2
             ? "#ffffff"
@@ -124,7 +132,10 @@
       },
 
       setObjective: function (text) {
-        this.objective.setAttribute("value", "OBJECTIVE  //  " + text);
+        this.objective.setAttribute(
+          "value",
+          "OBJECTIVE  //  " + text
+        );
       },
 
       tone: function (frequency, duration, kind, volume) {
@@ -135,7 +146,9 @@
             )();
           }
 
-          if (this.audio.state === "suspended") this.audio.resume();
+          if (this.audio.state === "suspended") {
+            this.audio.resume();
+          }
 
           const oscillator = this.audio.createOscillator();
           const gain = this.audio.createGain();
@@ -165,10 +178,10 @@
         this.alarmTimer = window.setInterval(() => {
           if (this.data.phase === PHASE.CRITICAL) {
             this.tone(176, 0.18, "square", 0.03);
-            window.setTimeout(
-              () => this.tone(220, 0.12, "square", 0.022),
-              190
-            );
+
+            window.setTimeout(() => {
+              this.tone(220, 0.12, "square", 0.022);
+            }, 190);
           }
         }, 2200);
       },
@@ -179,12 +192,17 @@
       },
 
       act: function (id, el) {
-        if (id === "replay-btn") return window.location.reload();
+        if (id === "replay-btn") {
+          window.location.reload();
+          return;
+        }
 
         if (
           this.data.phase === PHASE.WON ||
           this.data.phase === PHASE.LOST
-        ) return;
+        ) {
+          return;
+        }
 
         if (id.indexOf("crate") === 0) return this.openCrate(el);
         if (id === "stabilizer") return this.stabilize(el);
@@ -197,6 +215,7 @@
         if (this.data.phase !== PHASE.BRIEFING) return;
 
         this.setPhase(PHASE.CRITICAL);
+
         document.querySelector("#start-overlay").style.display = "none";
 
         this.ambient.setAttribute("light", "color", "#45111e");
@@ -208,9 +227,15 @@
       },
 
       openCrate: function (el) {
-        if (this.data.phase !== PHASE.CRITICAL || el.dataset.opened) return;
+        if (
+          this.data.phase !== PHASE.CRITICAL ||
+          el.dataset.opened
+        ) {
+          return;
+        }
 
         el.dataset.opened = "true";
+
         this.data.salvage++;
         this.data.oxygen = Math.min(90, this.data.oxygen + 5);
 
@@ -251,13 +276,15 @@
           "property: scale; to: 0 0 0; dur: 650; easing: easeInBack"
         );
 
-        window.setTimeout(() => el.setAttribute("visible", false), 650);
+        window.setTimeout(() => {
+          el.setAttribute("visible", false);
+        }, 650);
 
         this.tone(523, 0.16, "sine", 0.045);
-        window.setTimeout(
-          () => this.tone(784, 0.28, "sine", 0.045),
-          150
-        );
+
+        window.setTimeout(() => {
+          this.tone(784, 0.28, "sine", 0.045);
+        }, 150);
 
         this.say(
           "OXYGEN STABLE\nSECURITY CONSOLE ONLINE",
@@ -268,7 +295,10 @@
       },
 
       keypad: function (id, el) {
-        if (this.data.phase !== PHASE.STABLE || this.codeUnlocked) {
+        if (
+          this.data.phase !== PHASE.STABLE ||
+          this.codeUnlocked
+        ) {
           return this.denied("CONSOLE LOCKED");
         }
 
@@ -283,7 +313,12 @@
           "color: #4dff9a; emissive: #1c7f47; emissiveIntensity: 0.8"
         );
 
-        this.tone(660 + this.data.input * 90, 0.11, "square", 0.035);
+        this.tone(
+          660 + this.data.input * 90,
+          0.11,
+          "square",
+          0.035
+        );
 
         if (this.data.input < this.code.length) {
           this.say(
@@ -302,10 +337,9 @@
           "property: scale; to: 0 0 0; dur: 700; easing: easeInBack"
         );
 
-        window.setTimeout(
-          () => this.shield.setAttribute("visible", false),
-          700
-        );
+        window.setTimeout(() => {
+          this.shield.setAttribute("visible", false);
+        }, 700);
 
         this.tone(1047, 0.34, "sine", 0.05);
 
@@ -353,7 +387,9 @@
           "property: scale; to: 0 0 0; dur: 650; easing: easeInBack"
         );
 
-        window.setTimeout(() => el.setAttribute("visible", false), 650);
+        window.setTimeout(() => {
+          el.setAttribute("visible", false);
+        }, 650);
 
         this.ambient.setAttribute("light", "color", "#19a8be");
         this.ambient.setAttribute("light", "intensity", 0.7);
@@ -364,16 +400,17 @@
         );
 
         this.tone(392, 0.12, "triangle", 0.04);
-        window.setTimeout(
-          () => this.tone(587, 0.18, "triangle", 0.045),
-          110
-        );
-        window.setTimeout(
-          () => this.tone(784, 0.3, "triangle", 0.05),
-          250
-        );
+
+        window.setTimeout(() => {
+          this.tone(587, 0.18, "triangle", 0.045);
+        }, 110);
+
+        window.setTimeout(() => {
+          this.tone(784, 0.3, "triangle", 0.05);
+        }, 250);
 
         this.say("REACTOR ONLINE\nAIRLOCK READY", "#66fff2");
+
         this.setObjective("Click the airlock door.");
       },
 
@@ -400,14 +437,14 @@
           this.data.salvage * 250;
 
         this.tone(523, 0.12, "sine", 0.05);
-        window.setTimeout(
-          () => this.tone(659, 0.12, "sine", 0.05),
-          120
-        );
-        window.setTimeout(
-          () => this.tone(784, 0.34, "sine", 0.055),
-          250
-        );
+
+        window.setTimeout(() => {
+          this.tone(659, 0.12, "sine", 0.05);
+        }, 120);
+
+        window.setTimeout(() => {
+          this.tone(784, 0.34, "sine", 0.055);
+        }, 250);
 
         this.say(
           "MISSION COMPLETE\nSCORE  " +
@@ -843,11 +880,25 @@
         ></a-text>
       </a-plane>
 
+      <!-- Desktop mouse interaction -->
       <a-entity
         cursor="rayOrigin: mouse"
         raycaster="objects: .interactable; far: 30"
       ></a-entity>
     </a-camera>
+
+    <!-- VR controller interaction -->
+    <a-entity
+      laser-controls="hand: left"
+      raycaster="objects: .interactable; far: 30"
+      line="color: #77fff2; opacity: 0.85"
+    ></a-entity>
+
+    <a-entity
+      laser-controls="hand: right"
+      raycaster="objects: .interactable; far: 30"
+      line="color: #77fff2; opacity: 0.85"
+    ></a-entity>
   </a-scene>
 
   <script>
@@ -858,8 +909,11 @@
         scene.components["orbital-game"].start();
       };
 
-      if (scene.hasLoaded) begin();
-      else scene.addEventListener("loaded", begin, { once: true });
+      if (scene.hasLoaded) {
+        begin();
+      } else {
+        scene.addEventListener("loaded", begin, { once: true });
+      }
     });
   </script>
 </body>
