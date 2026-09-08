@@ -43,23 +43,50 @@
         this.replay = document.querySelector("#replay-btn");
         this.startBtn = document.querySelector("#start-btn");
         
-        this.sndAlarm = document.querySelector("#snd-alarm");
-        this.sndDoor = document.querySelector("#snd-door");
-        
         this.codeUnlocked = false;
+        this.lastSecond = 60;
 
         this.say("INCOMING TRANSMISSION\nORBITAL-07 IS FAILING", "#ff5268");
         this.setObjective("Scan START to begin.");
       },
       
+      // Απλή συνάρτηση για ήχους (δεν χρειάζονται mp3 αρχεία)
+      playSound: function(freq, type, duration) {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!this.audioCtx) this.audioCtx = new AudioContext();
+          if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+          
+          const osc = this.audioCtx.createOscillator();
+          const gain = this.audioCtx.createGain();
+          
+          osc.type = type || "sine";
+          osc.frequency.value = freq;
+          
+          gain.gain.setValueAtTime(0.05, this.audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + duration);
+          
+          osc.connect(gain);
+          gain.connect(this.audioCtx.destination);
+          
+          osc.start();
+          osc.stop(this.audioCtx.currentTime + duration);
+        } catch(e) {}
+      },
+
       tick: function (time, delta) {
         if (this.data.phase !== PHASE.CRITICAL) return;
         
         this.data.oxygen = Math.max(0, this.data.oxygen - delta / 1000);
-        
         const seconds = Math.ceil(this.data.oxygen);
-        const color = seconds <= 15 && Math.floor(time / 220) % 2 ? "#ffffff" : "#ff5268";
         
+        // Συναγερμός ήχου όταν τελειώνει το οξυγόνο
+        if (seconds !== this.lastSecond) {
+          this.lastSecond = seconds;
+          if (seconds <= 15) this.playSound(300, "square", 0.15);
+        }
+
+        const color = seconds <= 15 && Math.floor(time / 220) % 2 ? "#ffffff" : "#ff5268";
         this.say("LIFE SUPPORT FAILURE\nOXYGEN  " + String(seconds).padStart(2, "0") + "s\n\nFIND THE BLUE STABILIZER", color);
         
         if (this.data.oxygen <= 0) this.lose();
@@ -96,6 +123,7 @@
         if (this.data.phase !== PHASE.BRIEFING) return;
         
         this.setPhase(PHASE.CRITICAL);
+        this.playSound(400, "square", 0.3);
         
         this.startBtn.setAttribute("visible", false);
         this.startBtn.classList.remove("interactable");
@@ -104,8 +132,6 @@
         this.ambient.setAttribute("light", "intensity", 0.22);
         this.alarmRig.setAttribute("visible", true);
         this.setObjective("Find the blue oxygen stabilizer.");
-        
-        if (this.sndAlarm) this.sndAlarm.play().catch(e => console.log(e));
       },
       
       openCrate: function (el) {
@@ -116,6 +142,7 @@
         
         this.data.salvage++;
         this.data.oxygen = Math.min(90, this.data.oxygen + 5);
+        this.playSound(800, "sine", 0.2);
         
         el.setAttribute("material", "color: #42e8ff; emissive: #0d6f8d; emissiveIntensity: 0.8");
         el.setAttribute("animation__open", "property: rotation; to: 0 180 0; dur: 550; easing: easeOutBack");
@@ -128,8 +155,8 @@
         
         this.setPhase(PHASE.STABLE);
         el.classList.remove("interactable");
+        this.playSound(600, "sine", 0.5);
         
-        if (this.sndAlarm) this.sndAlarm.pause();
         this.alarmRig.setAttribute("visible", false);
         this.ambient.setAttribute("light", "color", "#244f91");
         this.ambient.setAttribute("light", "intensity", 0.52);
@@ -148,6 +175,7 @@
         
         this.data.input++;
         el.setAttribute("material", "color: #4dff9a; emissive: #1c7f47; emissiveIntensity: 0.8");
+        this.playSound(600 + (this.data.input * 100), "square", 0.15);
         
         if (this.data.input < this.code.length) {
           this.say("OVERRIDE ACCEPTED\nINPUT " + this.data.input + " / 3", "#75ffc1");
@@ -155,6 +183,7 @@
         }
         
         this.codeUnlocked = true;
+        this.playSound(1000, "sine", 0.4);
         
         ["btn1", "btn2", "btn3"].forEach(btnId => {
           document.querySelector("#" + btnId).classList.remove("interactable");
@@ -169,6 +198,7 @@
       
       resetKeypad: function () {
         this.data.input = 0;
+        this.playSound(150, "sawtooth", 0.4);
         ["btn1", "btn2", "btn3"].forEach(id => {
           document.querySelector("#" + id).setAttribute(
             "material", "color: #ff5268; emissive: #5b111d; emissiveIntensity: 0.45"
@@ -184,6 +214,7 @@
         
         this.setPhase(PHASE.POWERED);
         el.classList.remove("interactable");
+        this.playSound(800, "sine", 0.4);
         
         el.setAttribute("animation__collect", "property: scale; to: 0 0 0; dur: 650; easing: easeInBack");
         setTimeout(() => el.setAttribute("visible", false), 650);
@@ -204,8 +235,7 @@
         
         this.setPhase(PHASE.WON);
         this.door.classList.remove("interactable");
-        
-        if (this.sndDoor) this.sndDoor.play().catch(e => console.log(e));
+        this.playSound(900, "sine", 0.6);
         
         this.door.setAttribute(
           "animation__open", "property: position; to: 0 10 -14.6; dur: 1700; easing: easeInOutQuad"
@@ -224,8 +254,7 @@
       lose: function () {
         if (this.data.phase === PHASE.LOST) return;
         this.setPhase(PHASE.LOST);
-        
-        if (this.sndAlarm) this.sndAlarm.pause();
+        this.playSound(100, "sawtooth", 0.8);
         
         this.ambient.setAttribute("light", "color", "#12040b");
         this.ambient.setAttribute("light", "intensity", 0.06);
@@ -238,6 +267,7 @@
       
       denied: function (message) {
         this.say(message + "\nFOLLOW THE ACTIVE OBJECTIVE", "#ff9a63");
+        this.playSound(150, "square", 0.2);
       }
     });
 
@@ -267,11 +297,6 @@
 <body>
   
   <a-scene id="station" orbital-game renderer="colorManagement: true; physicallyCorrectLights: true" background="color: #02040d">
-    
-    <a-assets timeout="10000">
-       <audio id="snd-alarm" src="alarm.mp3" preload="auto" loop></audio>
-       <audio id="snd-door" src="door.mp3" preload="auto"></audio>
-    </a-assets>
 
     <a-sky color="#02040d"></a-sky>
     
@@ -290,6 +315,20 @@
     <a-plane width="30" height="10" position="0 5 15" rotation="0 180 0" material="color: #0b111b; metalness: 0.75"></a-plane>
     <a-plane width="30" height="10" position="0 5 -15" material="color: #0b111b; metalness: 0.75"></a-plane>
     <a-plane width="30" height="30" position="0 10 0" rotation="90 0 0" material="color: #080c13; metalness: 0.9"></a-plane>
+
+    <!-- Το κεντρικό UI βρίσκεται πλέον στον χώρο μπροστά από τον παίκτη, ΟΧΙ στην κάμερα! -->
+    <a-entity id="ui-container" position="0 2.4 7">
+      <a-text id="objective" value="" align="center" position="0 1.2 0" color="#acdff2" width="5"></a-text>
+      <a-text id="hud" value="" align="center" position="0 0.5 0" color="#9dfcff" width="5"></a-text>
+      
+      <a-plane id="start-btn" class="interactable" interactable position="0 -0.4 0" width="2.5" height="0.6" material="color: #0b2635; emissive: #135066; emissiveIntensity: 0.8">
+        <a-text value="[ SCAN TO START ]" align="center" color="#83fff4" width="3.5"></a-text>
+      </a-plane>
+
+      <a-plane id="replay-btn" class="interactable" visible="false" position="0 -0.4 0" width="2.5" height="0.6" material="color: #153b44; emissive: #15616a; emissiveIntensity: 0.8">
+        <a-text value="[ SCAN TO REPLAY ]" align="center" color="#8afff1" width="3.5"></a-text>
+      </a-plane>
+    </a-entity>
 
     <a-entity id="exit-door" position="0 4 -14.6" class="interactable" interactable>
       <a-box width="7" height="8" depth="0.55" material="color: #142431; metalness: 0.8"></a-box>
@@ -333,18 +372,6 @@
     </a-entity>
 
     <a-camera id="camera" position="0 2.4 10" wasd-controls="acceleration: 28">
-      
-      <a-text id="objective" value="" align="center" position="0 1.5 -2.6" color="#acdff2" width="3.6"></a-text>
-      <a-text id="hud" value="" align="center" position="0 0.65 -2.6" color="#9dfcff" width="3.6"></a-text>
-      
-      <a-plane id="start-btn" class="interactable" interactable position="0 0 -2.6" width="2.5" height="0.6" material="color: #0b2635; emissive: #135066; emissiveIntensity: 0.8">
-        <a-text value="[ SCAN TO START ]" align="center" color="#83fff4" width="3.5"></a-text>
-      </a-plane>
-
-      <a-plane id="replay-btn" visible="false" position="0 0 -2.6" width="2.5" height="0.6" material="color: #153b44; emissive: #15616a; emissiveIntensity: 0.8">
-        <a-text value="[ SCAN TO REPLAY ]" align="center" color="#8afff1" width="3.5"></a-text>
-      </a-plane>
-      
       <a-entity cursor="fuse: true; fuseTimeout: 1200"
                 raycaster="objects: .interactable; far: 30"
                 position="0 0 -1"
@@ -353,7 +380,6 @@
                 animation__fusing="property: geometry.thetaLength; startEvents: fusing; from: 0; to: 360; dur: 1200"
                 animation__reset="property: geometry.thetaLength; startEvents: mouseleave; to: 0; dur: 100">
       </a-entity>
-      
     </a-camera>
 
   </a-scene>
