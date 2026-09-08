@@ -5,7 +5,7 @@
   <title>Orbital Lockdown</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script>
-    var locked = true, power = false, gas = true, message = "", time = 6000;
+    var locked = true, power = false, gas = true, ended = false, message = "", time = 6000;
 
     function fadeOutSound(id, duration) {
       var soundEl = document.getElementById(id);
@@ -26,6 +26,21 @@
       }
 
       requestAnimationFrame(fade);
+    }
+
+    function finishGame() {
+      var cam = document.getElementById('cam');
+      cam.setAttribute('wasd-controls', 'enabled', false);
+      cam.setAttribute('look-controls', 'enabled', false);
+      document.getElementById('hud').setAttribute('visible', false);
+      document.getElementById('player-cursor').setAttribute('visible', false);
+      document.getElementById('dust').pause();
+
+      var ending = document.getElementById('ending-screen');
+      ending.setAttribute('visible', true);
+      document.getElementById('ending-panel').setAttribute('animation__fadein', 'property: material.opacity; from: 0; to: 0.94; dur: 900; easing: easeOutQuad');
+      document.getElementById('ending-title').setAttribute('animation__fadein', 'property: text.opacity; from: 0; to: 1; dur: 900; delay: 250; easing: easeOutQuad');
+      document.getElementById('ending-text').setAttribute('animation__fadein', 'property: text.opacity; from: 0; to: 1; dur: 900; delay: 550; easing: easeOutQuad');
     }
 
     AFRAME.registerComponent('updating', {
@@ -194,6 +209,7 @@
       init: function () {
         var el = this.el;
         el.addEventListener('mouseenter', function () {
+          if (ended) return;
           var pos = document.getElementById('cam').getAttribute('position');
 
           if (el.id == "door") {
@@ -202,7 +218,9 @@
               fadeOutSound('creepy', 1600);
               message = "Mission Accomplished! You Escaped!";
               gas = false;
+              ended = true;
               document.getElementById('airlock-steam').emit('activate');
+              setTimeout(finishGame, 3000);
               var flash = document.getElementById('victory-flash');
               flash.setAttribute('animation__flashin', 'property: material.opacity; from: 0; to: 0.72; dur: 170; easing: easeOutQuad');
               flash.setAttribute('animation__flashout', 'property: material.opacity; from: 0.72; to: 0; dur: 900; delay: 170; easing: easeInQuad');
@@ -258,7 +276,7 @@
 
     <a-entity id="alarm" sound="src: #snd-alarm; autoplay: true; loop: true"></a-entity>
     <a-entity id="creepy" sound="src: #snd-creepy; loop: true; volume: 0.55"></a-entity>
-    <a-entity dust-field></a-entity>
+    <a-entity id="dust" dust-field></a-entity>
     <a-light id="emergency" type="point" color="#ff2438" intensity="0.35" distance="30" position="0 8 0" animation__pulse="property: light.intensity; from: 0.2; to: 1.8; dur: 650; dir: alternate; loop: true; easing: easeInOutSine"></a-light>
 
     <a-light id="ambient" type="ambient" color="#152342" intensity="0.32"></a-light>
@@ -298,14 +316,15 @@
     </a-entity>
 
     <a-camera id="cam" position="0 2.4 10">
-      <a-entity low-oxygen-vignette></a-entity>
-      <a-entity id="title-card" position="0 0 -1.45" non-interactive>
-        <a-plane width="2.9" height="0.72" material="color: #020814; shader: flat; transparent: true; opacity: 0" animation__panelin="property: material.opacity; from: 0; to: 0.78; dur: 900; delay: 150" animation__panelout="property: material.opacity; from: 0.78; to: 0; dur: 900; delay: 3100"></a-plane>
-        <a-text value="ORBITAL LOCKDOWN\nRestore oxygen and escape." align="center" position="0 0 0.01" color="#bcefff" width="2.65" opacity="0" animation__titlein="property: text.opacity; from: 0; to: 1; dur: 900; delay: 250" animation__titleout="property: text.opacity; from: 1; to: 0; dur: 900; delay: 3000"></a-text>
+      <a-entity id="ending-screen" position="0 0 -1.05" visible="false" non-interactive>
+        <a-plane id="ending-panel" width="1.95" height="1.15" material="color: #020814; shader: flat; transparent: true; opacity: 0"></a-plane>
+        <a-text id="ending-title" value="MISSION ACCOMPLISHED" align="center" position="0 0.22 0.01" color="#63ffb0" width="1.8" opacity="0"></a-text>
+        <a-text id="ending-text" value="You escaped Orbital Lockdown.\nRefresh the page to play again." align="center" position="0 -0.18 0.01" color="#c8f4ff" width="1.55" opacity="0"></a-text>
       </a-entity>
+      <a-entity low-oxygen-vignette></a-entity>
       <a-plane id="victory-flash" position="0 0 -0.6" width="4" height="3" material="color: #d9fbff; shader: flat; transparent: true; opacity: 0; depthTest: false" non-interactive></a-plane>
-      <a-text updating value="" align="center" geometry="primitive: plane; width: 6; height: 1" position="0 0.5 -1.5" material="opacity: 0" color="#9dfcff"></a-text>
-      <a-cursor color="cyan" fuse="true" far="10"></a-cursor>
+      <a-text id="hud" updating value="" align="center" geometry="primitive: plane; width: 6; height: 1" position="0 0.5 -1.5" material="opacity: 0" color="#9dfcff"></a-text>
+      <a-cursor id="player-cursor" color="cyan" fuse="true" far="10"></a-cursor>
     </a-camera>
   </a-scene>
 </body>
