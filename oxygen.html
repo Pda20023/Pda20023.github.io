@@ -6,14 +6,7 @@
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   
   <script>
-    AFRAME.registerComponent("pulse-light", {
-      schema: {min: {default: 0.25}, max: {default: 0.75}, speed: {default: 1}},
-      tick: function (time) {
-        const wave = (Math.sin(time * 0.001 * this.data.speed) + 1) / 2;
-        this.el.setAttribute("light", "intensity", this.data.min + wave * (this.data.max - this.data.min));
-      }
-    });
-
+    // Ο κεντρικός εγκέφαλος του παιχνιδιού
     AFRAME.registerComponent("orbital-game", {
       schema: {
         phase: {type: "string", default: "intro"},
@@ -33,6 +26,7 @@
         this.startBtn = document.querySelector("#start-btn");
         this.replayBtn = document.querySelector("#replay-btn");
         
+        // Φόρτωση Ήχων
         this.sndAlarm = document.querySelector("#snd-alarm");
         this.sndDoor = document.querySelector("#snd-door");
         
@@ -48,6 +42,7 @@
         this.data.oxygen = Math.max(0, this.data.oxygen - delta / 1000);
         const seconds = Math.ceil(this.data.oxygen);
         
+        // Αναβοσβήνει στα τελευταία 15 δευτερόλεπτα
         const color = seconds <= 15 && Math.floor(time / 220) % 2 ? "#ffffff" : "#ff5268";
         
         this.say("LIFE SUPPORT FAILURE\nOXYGEN  " + String(seconds).padStart(2, "0") + "s\n\nFIND THE BLUE STABILIZER", color);
@@ -82,10 +77,12 @@
         
         this.data.phase = "critical";
         
+        // Κρύβουμε και απενεργοποιούμε το Start Menu
         this.startBtn.setAttribute("visible", false);
         this.startBtn.classList.remove("interactable");
         this.startBtn.setAttribute("scale", "0 0 0");
         
+        // Ανάβει ο συναγερμός (Κόκκινα φώτα και Ήχος)
         this.ambient.setAttribute("light", "color", "#45111e");
         this.ambient.setAttribute("light", "intensity", 0.22);
         this.alarmRig.setAttribute("visible", true);
@@ -98,10 +95,10 @@
         if (this.data.phase !== "critical" || el.dataset.opened) return;
         
         el.dataset.opened = "true";
-        el.classList.remove("interactable");
+        el.classList.remove("interactable"); // Δεν ξαναπατιέται
         
         this.data.salvage++;
-        this.data.oxygen = Math.min(90, this.data.oxygen + 5);
+        this.data.oxygen = Math.min(90, this.data.oxygen + 5); // Δίνει +5s
         
         el.setAttribute("material", "color: #42e8ff; emissive: #0d6f8d; emissiveIntensity: 0.8");
         el.setAttribute("animation__open", "property: rotation; to: 0 180 0; dur: 550; easing: easeOutBack");
@@ -118,9 +115,11 @@
         this.data.phase = "stable";
         el.classList.remove("interactable");
         
+        // Κλείνει ο συναγερμός
         if (this.sndAlarm) this.sndAlarm.pause();
         this.alarmRig.setAttribute("visible", false);
         
+        // Ο φωτισμός γίνεται μπλε
         this.ambient.setAttribute("light", "color", "#244f91");
         this.ambient.setAttribute("light", "intensity", 0.52);
         
@@ -137,6 +136,7 @@
           return;
         }
         
+        // Λάθος κωδικός
         if (id !== this.code[this.data.input]) {
           this.data.input = 0;
           ["btn1", "btn2", "btn3"].forEach(function(btnId) {
@@ -146,6 +146,7 @@
           return;
         }
         
+        // Σωστό ψηφίο
         this.data.input++;
         el.setAttribute("material", "color: #4dff9a; emissive: #1c7f47; emissiveIntensity: 0.8");
         
@@ -154,6 +155,7 @@
           return;
         }
         
+        // Σωστός Κωδικός
         this.codeUnlocked = true;
         
         ["btn1", "btn2", "btn3"].forEach(function(btnId) {
@@ -179,6 +181,7 @@
         el.setAttribute("animation__collect", "property: scale; to: 0 0 0; dur: 650; easing: easeInBack");
         setTimeout(function() { el.setAttribute("visible", false); }, 650);
         
+        // Ο φωτισμός γίνεται έντονος κυανός
         this.ambient.setAttribute("light", "color", "#19a8be");
         this.ambient.setAttribute("light", "intensity", 0.7);
         
@@ -197,6 +200,7 @@
         this.data.phase = "won";
         this.door.classList.remove("interactable");
         
+        // Ανοίγει η πόρτα και παίζει ο ήχος
         if (this.sndDoor) this.sndDoor.play().catch(function(){});
         this.door.setAttribute("animation__open", "property: position; to: 0 10 -14.6; dur: 1700; easing: easeInOutQuad");
         
@@ -226,6 +230,7 @@
       }
     });
 
+    // Ο ΑΛΑΝΘΑΣΤΟΣ ΜΗΧΑΝΙΣΜΟΣ SCAN (Χωρίς να τρέμει)
     AFRAME.registerComponent("interactable", {
       init: function () {
         var el = this.el;
@@ -238,7 +243,7 @@
         
         el.addEventListener("mouseenter", function () {
           if (el.classList.contains("interactable")) {
-            el.setAttribute("scale", "1.1 1.1 1.1"); 
+            el.setAttribute("scale", "1.1 1.1 1.1"); // Σταθερό zoom, όχι animation!
           }
         });
         
@@ -251,24 +256,26 @@
 </head>
 <body>
   
-  <a-scene id="station" orbital-game renderer="colorManagement: true; physicallyCorrectLights: true" background="color: #02040d" fog="type: linear; color: #02040d; near: 2; far: 25">
+  <a-scene id="station" orbital-game renderer="colorManagement: true; physicallyCorrectLights: true" background="color: #02040d">
     
+    <!-- Εδώ φορτώνουν τα ΔΙΚΑ ΣΟΥ αρχεία ήχου -->
     <a-assets timeout="10000">
        <audio id="snd-alarm" src="alarm.mp3" preload="auto" loop></audio>
        <audio id="snd-door" src="door.mp3" preload="auto"></audio>
     </a-assets>
 
-    <a-sky color="#02040d"></a-sky>
-    
+    <!-- Ατμόσφαιρα & Φώτα -->
     <a-light id="ambient" type="ambient" color="#152342" intensity="0.32"></a-light>
-    <a-light type="point" color="#32b9ff" intensity="1.4" distance="13" position="0 7 5" pulse-light="min: 0.9; max: 1.4; speed: 0.75"></a-light>
+    <a-light type="point" color="#32b9ff" intensity="1.4" distance="13" position="0 7 5" animation="property: intensity; from: 0.9; to: 1.4; dir: alternate; loop: true; dur: 800"></a-light>
     <a-light id="escape-light" type="point" color="#74fff1" intensity="0" distance="18" position="0 4 -13"></a-light>
 
+    <!-- Ο Κόκκινος Συναγερμός -->
     <a-entity id="alarm-rig" visible="false" position="0 8 0" animation="property: rotation; to: 0 360 0; loop: true; dur: 1300; easing: linear">
       <a-light type="spot" color="#ff173a" intensity="4" angle="44" distance="24" rotation="-54 0 0"></a-light>
       <a-light type="spot" color="#ff173a" intensity="4" angle="44" distance="24" rotation="-54 180 0"></a-light>
     </a-entity>
 
+    <!-- Το Δωμάτιο (Όμορφα Σκούρα Χρώματα) -->
     <a-plane width="30" height="30" rotation="-90 0 0" material="color: #101722; metalness: 0.7; roughness: 0.42"></a-plane>
     <a-plane width="30" height="10" position="-15 5 0" rotation="0 90 0" material="color: #0b111b; metalness: 0.75"></a-plane>
     <a-plane width="30" height="10" position="15 5 0" rotation="0 -90 0" material="color: #0b111b; metalness: 0.75"></a-plane>
@@ -276,7 +283,8 @@
     <a-plane width="30" height="10" position="0 5 -15" material="color: #0b111b; metalness: 0.75"></a-plane>
     <a-plane width="30" height="30" position="0 10 0" rotation="90 0 0" material="color: #080c13; metalness: 0.9"></a-plane>
 
-    <a-entity position="0 2.4 7">
+    <!-- Το UI - Βρίσκεται στα 3 μέτρα ΜΠΡΟΣΤΑ από τον παίκτη, όχι κολλημένο πάνω του -->
+    <a-entity position="0 2.4 -3">
       <a-text id="objective" value="" align="center" position="0 1.2 0" color="#acdff2" width="3.6"></a-text>
       <a-text id="hud" value="" align="center" position="0 0.5 0" color="#9dfcff" width="3.6"></a-text>
       
@@ -289,12 +297,14 @@
       </a-plane>
     </a-entity>
 
+    <!-- Πόρτα Airlock -->
     <a-entity id="exit-door" position="0 4 -14.6" class="interactable" interactable>
       <a-box width="7" height="8" depth="0.55" material="color: #142431; metalness: 0.8"></a-box>
       <a-torus id="door-ring" radius="1.05" radius-tubular="0.07" position="0 0 0.32" material="color: #416070; emissive: #0f2733; emissiveIntensity: 0.65"></a-torus>
       <a-text value="AIRLOCK" align="center" position="0 1.85 0.34" color="#97d7e8" width="4"></a-text>
     </a-entity>
 
+    <!-- Το Μπλε Οξυγόνο -->
     <a-entity position="-6 0 -6">
       <a-cylinder radius="1.25" height="0.7" position="0 0.35 0" material="color: #26394c; metalness: 0.8"></a-cylinder>
       <a-entity id="stabilizer" position="0 1.55 0" class="interactable" interactable animation="property: rotation; to: 0 360 0; loop: true; dur: 4200">
@@ -304,12 +314,14 @@
       <a-text value="O2 STABILIZER" align="center" position="0 0.04 1.3" rotation="-90 0 0" color="#6cdcff" width="3"></a-text>
     </a-entity>
 
+    <!-- Κιβώτια -->
     <a-entity position="-10 0 -10">
       <a-box id="crate1" width="1.25" height="1.25" depth="1.25" position="0 0.65 0" class="interactable" interactable material="color: #5b4538"></a-box>
       <a-box id="crate2" width="1.25" height="1.25" depth="1.25" position="1.45 0.65 -0.35" rotation="0 18 0" class="interactable" interactable material="color: #4a3d37"></a-box>
       <a-box id="crate3" width="1.25" height="1.25" depth="1.25" position="0.3 1.9 -0.1" rotation="0 -12 0" class="interactable" interactable material="color: #675144"></a-box>
     </a-entity>
 
+    <!-- Keypad (Κονσόλα) -->
     <a-entity position="6 0 -6" rotation="0 -28 0">
       <a-box width="3.4" height="2.4" depth="1" position="0 1.2 0" material="color: #192536; metalness: 0.8"></a-box>
       <a-plane width="2.7" height="1.55" position="0 1.35 0.52" material="color: #08151d; emissive: #062736; emissiveIntensity: 0.6"></a-plane>
@@ -319,6 +331,7 @@
       <a-box id="btn3" width="0.46" height="0.46" depth="0.12" position="0.72 0.86 0.61" class="interactable" interactable material="color: #ff5268; emissive: #5b111d"><a-text value="3" align="center" position="0 0 0.07"></a-text></a-box>
     </a-entity>
 
+    <!-- Reactor Core -->
     <a-entity position="6 1.75 -10">
       <a-cylinder radius="1.15" height="1.2" position="0 -1.15 0" material="color: #283540; metalness: 0.85"></a-cylinder>
       <a-entity id="crystal-shield" animation="property: rotation; to: 0 360 0; loop: true; dur: 5000">
@@ -330,7 +343,8 @@
       </a-entity>
     </a-entity>
 
-    <a-camera id="camera" position="0 2.4 10" wasd-controls="acceleration: 28">
+    <!-- Κάμερα (Μόνο αυτή κουνιέται, το μενού είναι σταθερό στο δωμάτιο!) -->
+    <a-camera id="camera" position="0 2.4 1">
       <a-entity cursor="fuse: true; fuseTimeout: 1200"
                 raycaster="objects: .interactable; far: 30"
                 position="0 0 -1"
