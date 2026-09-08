@@ -1,0 +1,299 @@
+<html>
+<head>
+<meta charset="utf-8">
+<title>Mystic Forest Escape</title>
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<script src="https://c-frame.github.io/aframe-physics-system/dist/aframe-physics-system.js"></script>
+<script>
+  const GAME_STATE = {
+    INTRO: 'intro',
+    CRITICAL: 'critical',
+    STABLE: 'stable',
+    POWERED: 'powered',
+    ESCAPED: 'escaped'
+  };
+
+  AFRAME.registerComponent('flicker', {
+    tick: function () {
+      if (Math.random() > 0.90) this.el.setAttribute('intensity', Math.random() * 0.4 + 0.1);
+    }
+  });
+
+  AFRAME.registerComponent('game-manager', {
+    schema: {
+      lightTime: {type: 'number', default: 3500},
+      state: {type: 'string', default: GAME_STATE.INTRO},
+      keypadCode: {type: 'array', default: ['btn3', 'btn1', 'btn2']},
+      currentInput: {type: 'number', default: 0}
+    },
+
+    init: function () {
+      this.ui = document.getElementById('hud-text');
+      this.door = document.getElementById('exit-door');
+      this.ambient = document.getElementById('ambient-light');
+      this.creepyAudio = document.getElementById('snd-creepy');
+      this.windAudio = document.getElementById('snd-wind');
+      this.cricketsAudio = document.getElementById('snd-crickets');
+      this.restartBtn = document.getElementById('restart-btn');
+      this.gameOverTriggered = false;
+    },
+
+    updateHUD: function(message, color = '#33ff33') {
+      this.ui.setAttribute('value', message);
+      this.ui.setAttribute('color', color);
+    },
+
+    endGame: function(message, color) {
+      this.updateHUD(message, color);
+      if (this.creepyAudio) this.creepyAudio.pause();
+      if (this.windAudio) this.windAudio.pause();
+      if (this.cricketsAudio) this.cricketsAudio.pause();
+      var btn = this.restartBtn;
+      if (btn) {
+        setTimeout(function () { btn.setAttribute('visible', true); }, 2500);
+      }
+    },
+
+    changeState: function(newState) {
+      this.el.setAttribute('game-manager', 'state', newState);
+    },
+
+    tick: function () {
+      if (this.data.state === GAME_STATE.CRITICAL) {
+        if (this.data.lightTime > 0) this.data.lightTime--;
+
+        if (this.data.lightTime <= 0) {
+          if (!this.gameOverTriggered) {
+            this.gameOverTriggered = true;
+            this.endGame('CONSUMED BY THE WOODS', '#ff0000');
+            document.querySelector('a-scene').setAttribute('fog', 'color: black; near: 0; far: 2');
+          }
+          return;
+        }
+
+        if (this.data.lightTime < 1000) {
+          var flash = (this.data.lightTime % 20 < 10) ? '#ff0000' : '#ffffff';
+          this.updateHUD('THE DARKNESS IS HERE!\nLIGHT: ' + Math.round(this.data.lightTime / 100) + '%', flash);
+        } else {
+          this.updateHUD('THE FOG IS CLOSING IN...\nLIGHT: ' + Math.round(this.data.lightTime / 100) + '%', '#ff8800');
+        }
+      }
+    },
+
+    triggerAction: function(targetId, el) {
+      if (targetId === 'restart-btn') {
+        window.location.reload();
+        return;
+      }
+
+      if (this.data.state === GAME_STATE.ESCAPED || this.data.lightTime <= 0) return;
+
+      if (this.data.state === GAME_STATE.INTRO && targetId === 'start-btn') {
+        this.handleIntro(el);
+      } else if (targetId.startsWith('rock') || targetId.startsWith('log')) {
+        this.handleObstacle(el);
+      } else if (targetId === 'mushroom') {
+        this.handleMushroom(el);
+      } else if (targetId.startsWith('btn')) {
+        this.handleKeypad(targetId, el);
+      } else if (targetId === 'exit-door') {
+        this.handleDoor();
+      }
+    },
+
+    handleIntro: function(el) {
+      this.changeState(GAME_STATE.CRITICAL);
+      el.setAttribute('visible', 'false');
+      el.setAttribute('position', '0 1000 0');
+      if(this.creepyAudio) this.creepyAudio.play().catch(() => {});
+      if(this.windAudio) this.windAudio.play().catch(() => {});
+      if(this.cricketsAudio) { this.cricketsAudio.volume = 0.25; this.cricketsAudio.play().catch(() => {}); }
+      document.querySelector('a-scene').setAttribute('fog', 'color: #0a110a; near: 2; far: 25');
+    },
+
+    handleObstacle: function(el) {
+      if (el.body) {
+        var force = new CANNON.Vec3((Math.random() - 0.5) * 15, 10, (Math.random() - 0.5) * 15);
+        el.body.applyImpulse(force, el.body.position);
+        this.updateHUD('PATH CLEARED', '#00ffff');
+      }
+    },
+
+    handleMushroom: function(el) {
+      if (this.data.state !== GAME_STATE.CRITICAL) return;
+
+      this.changeState(GAME_STATE.STABLE);
+      this.updateHUD('THE LIGHT IS RESTORED\nOPEN THE ANCIENT ARCH');
+
+      if(this.creepyAudio) this.creepyAudio.pause();
+
+      this.ambient.setAttribute('color', '#aaffaa');
+      this.ambient.setAttribute('intensity', '0.6');
+      this.ambient.removeAttribute('flicker');
+
+      this.absorbItem(el);
+    },
+
+    handleKeypad: function(targetId, el) {
+      if (this.data.state !== GAME_STATE.STABLE) return;
+
+      var expected = this.data.keypadCode[this.data.currentInput];
+
+      if (targetId === expected) {
+        this.data.currentInput++;
+        el.setAttribute('material', 'color', '#00ff00');
+
+        if (this.data.currentInput === 3) {
+          this.changeState(GAME_STATE.POWERED);
+          this.updateHUD('RUNES ACCEPTED\nENTER THE ARCHWAY', '#00ffff');
+        }
+      } else {
+        this.resetKeypad();
+      }
+    },
+
+    resetKeypad: function() {
+      this.data.currentInput = 0;
+      this.updateHUD('THE RUNES REJECT YOU.\nTRY AGAIN.', '#ff0000');
+
+      document.getElementById('btn1').setAttribute('material', 'color', '#ff3333');
+      document.getElementById('btn2').setAttribute('material', 'color', '#ff3333');
+      document.getElementById('btn3').setAttribute('material', 'color', '#ff3333');
+
+      setTimeout(() => {
+        if(this.data.state === GAME_STATE.STABLE) {
+          this.updateHUD('THE LIGHT IS RESTORED\nOPEN THE ANCIENT ARCH');
+        }
+      }, 1500);
+    },
+
+    handleDoor: function() {
+      if (this.data.state === GAME_STATE.POWERED) {
+        this.changeState(GAME_STATE.ESCAPED);
+        this.endGame('YOU ESCAPED THE FOREST', '#00ffff');
+
+        // Κάνει την αψίδα να βυθιστεί ή να κινηθεί για να περάσεις
+        this.door.setAttribute('animation', 'property: position; to: 0 -7 -14.8; dur: 5000; easing: easeInOutQuad');
+
+        document.querySelector('a-scene').setAttribute('animation__fog', 'property: fog.far; to: 4000; dur: 4000');
+      } else {
+        this.updateHUD('THE ARCHWAY IS SEALED\nFIND THE RUNES', '#ff3333');
+      }
+    },
+
+    absorbItem: function(el) {
+      var camPos = document.getElementById('cam').getAttribute('position');
+      if(el.hasAttribute('dynamic-body')) el.removeAttribute('dynamic-body');
+      el.setAttribute('animation', 'property: scale; to: 0 0 0; dur: 1000');
+      el.setAttribute('animation__pos', 'property: position; to: ' + camPos.x + ' 1 ' + camPos.z + '; dur: 1000');
+      setTimeout(() => el.remove(), 1000);
+    }
+  });
+
+  AFRAME.registerComponent('scannable', {
+    init: function () {
+      var uiPanelIds = ['start-btn', 'restart-btn'];
+
+      this.el.addEventListener('click', () => {
+        var scene = document.querySelector('a-scene');
+        if (scene && scene.components['game-manager']) {
+          scene.components['game-manager'].triggerAction(this.el.id, this.el);
+        }
+      });
+
+      this.el.addEventListener('mouseenter', () => {
+        if(uiPanelIds.indexOf(this.el.id) === -1) {
+           this.el.setAttribute('animation__scale', 'property: scale; to: 1.2 1.2 1.2; dur: 300; dir: alternate; loop: true');
+        }
+      });
+      this.el.addEventListener('mouseleave', () => {
+        this.el.removeAttribute('animation__scale');
+        if(uiPanelIds.indexOf(this.el.id) === -1) this.el.setAttribute('scale', '1 1 1');
+      });
+    }
+  });
+</script>
+</head>
+<body>
+<a-scene id="s1" physics="debug: false" fog="color: black; near: 0; far: 3" shadow="type: pcfsoft" game-manager>
+  <!-- ΤΑ ΝΕΑ ΣΟΥ ΑΡΧΕΙΑ ΜΕ ΤΑ ΑΠΛΑ ΟΝΟΜΑΤΑ ΠΟΥ ΤΑ ΜΕΤΟΝΟΜΑΣΑΜΕ -->
+  <a-assets timeout="10000">
+    <a-asset-item id="tree-model" src="tree.glb"></a-asset-item>
+    <a-asset-item id="mushroom-model" src="mushroom.glb"></a-asset-item>
+    <a-asset-item id="rock-model" src="rock.glb"></a-asset-item>
+    <a-asset-item id="arch-model" src="archway.glb"></a-asset-item>
+    <a-asset-item id="log-model" src="log.glb"></a-asset-item>
+
+    <!-- Αν οι ήχοι είναι .wav άλλαξε την κατάληξη παρακάτω -->
+    <audio id="snd-wind" src="wind.mp3" preload="auto" loop></audio>
+    <audio id="snd-creepy" src="creepy.mp3" preload="auto" loop></audio>
+    <audio id="snd-crickets" src="crickets.mp3" preload="auto" loop></audio>
+  </a-assets>
+
+  <!-- Σκοτεινός ουρανός δάσους -->
+  <a-sky color="#03080c"></a-sky>
+
+  <!-- Χώμα/Γρασίδι - Πάτωμα (Χρησιμοποιούμε χρώμα δάσους αντί για μέταλλο) -->
+  <a-plane static-body width="100" height="100" position="0 0 0" rotation="-90 0 0" material="color: #1b2611; roughness: 0.9"></a-plane>
+
+  <!-- Αόρατοι τοίχοι (για να μην βγεις εκτός δάσους) -->
+  <a-plane static-body width="30" height="10" position="-15 5 0" rotation="0 90 0" visible="false"></a-plane>
+  <a-plane static-body width="30" height="10" position="15 5 0" rotation="0 -90 0" visible="false"></a-plane>
+  <a-plane static-body width="30" height="10" position="0 5 15" rotation="0 180 0" visible="false"></a-plane>
+  <a-plane static-body width="30" height="10" position="0 5 -15" visible="false"></a-plane>
+
+  <a-light id="ambient-light" type="ambient" intensity="0.2" color="#4455aa" flicker></a-light>
+
+  <!-- Διακόσμηση Δάσους (Δέντρα γύρω γύρω) -->
+  <a-entity gltf-model="#tree-model" position="-8 0 -8" scale="2 2 2"></a-entity>
+  <a-entity gltf-model="#tree-model" position="8 0 -5" scale="2.5 2.5 2.5"></a-entity>
+  <a-entity gltf-model="#tree-model" position="-5 0 8" scale="1.8 1.8 1.8"></a-entity>
+  <a-entity gltf-model="#tree-model" position="5 0 10" scale="2 2 2"></a-entity>
+
+  <!-- Οδηγία για τον κωδικό στους ρούνους -->
+  <a-text value="ANCIENT RUNES:\n3 - 1 - 2" position="14.9 4 -5" rotation="0 -90 0" color="#ffaa00" align="center" scale="2 2 2" opacity="0.7"></a-text>
+
+  <!-- Η Πύλη / Archway -->
+  <a-entity id="exit-door" gltf-model="#arch-model" position="0 0 -14.8" scale="1.5 1.5 1.5" scannable></a-entity>
+
+  <a-camera id="cam" position="0 2.5 10">
+    <!-- Κείμενο Εκκίνησης -->
+    <a-plane id="start-btn" position="0 0 -1.5" width="4" height="2" color="#000" opacity="0.9" scannable>
+      <a-text value="THE WOODS ARE AWAKE.\nTHE SHADOWS ARE CLOSING IN.\nFIND THE GLOWING SPORE TO SURVIVE.\n\n[ SCAN TO OPEN YOUR EYES ]" align="center" color="#ff8800" scale="0.8 0.8 0.8"></a-text>
+    </a-plane>
+
+    <a-plane id="restart-btn" position="0 -1.3 -1.5" width="4" height="1.2" color="#000" opacity="0.9" visible="false" scannable>
+      <a-text value="[ CLICK TO PLAY AGAIN ]" align="center" color="#ffaa00" scale="0.7 0.7 0.7"></a-text>
+    </a-plane>
+
+    <a-text id="hud-text" value="" align="center" position="0 1.2 -2" color="#ff3333" width="6" font="exo2bold"></a-text>
+
+    <!-- Ο δείκτης στόχευσης -->
+    <a-entity cursor="fuse: true; fuseTimeout: 1500"
+              position="0 0 -1"
+              geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+              material="color: #ffaa00; shader: flat"
+              animation__fusing="property: geometry.thetaLength; startEvents: fusing; from: 0; to: 360; dur: 1500"
+              animation__reset="property: geometry.thetaLength; startEvents: mouseleave; to: 0; dur: 100">
+    </a-entity>
+  </a-camera>
+
+  <!-- Το μαγικό μανιτάρι που μαζεύεις (Αντικαθιστά τη Σφαίρα) -->
+  <a-entity id="mushroom" gltf-model="#mushroom-model" scale="2 2 2" position="-6 1 -6" scannable animation="property: position; to: -6 1.2 -6; dir: alternate; loop: true; dur: 2000"></a-entity>
+
+  <!-- Φυσικά εμπόδια (Βράχοι) αντί για κιβώτια -->
+  <a-entity id="rock1" gltf-model="#rock-model" dynamic-body="mass: 5" position="-5.5 4 -5" scale="1.5 1.5 1.5" scannable></a-entity>
+  <a-entity id="rock2" gltf-model="#rock-model" dynamic-body="mass: 5" position="-6.5 6 -5" scale="1.2 1.2 1.2" scannable></a-entity>
+  <a-entity id="rock3" gltf-model="#rock-model" dynamic-body="mass: 5" position="-5.5 8 -6" scale="1.4 1.4 1.4" scannable></a-entity>
+  <a-entity id="log1" gltf-model="#log-model" dynamic-body="mass: 8" position="-4.5 6 -6.5" scale="1.6 1.6 1.6" scannable></a-entity>
+
+  <!-- Ο Γρίφος (Οι 3 πέτρες / Runes) -->
+  <a-entity position="6 1 -5" rotation="0 -30 0">
+    <a-box id="btn1" width="0.4" height="0.4" depth="0.4" position="-0.8 0 0" material="color: #ff3333; roughness: 0.9" scannable><a-text value="1" align="center" position="0 0 0.21" color="white"></a-text></a-box>
+    <a-box id="btn2" width="0.4" height="0.4" depth="0.4" position="0 0 0" material="color: #ff3333; roughness: 0.9" scannable><a-text value="2" align="center" position="0 0 0.21" color="white"></a-text></a-box>
+    <a-box id="btn3" width="0.4" height="0.4" depth="0.4" position="0.8 0 0" material="color: #ff3333; roughness: 0.9" scannable><a-text value="3" align="center" position="0 0 0.21" color="white"></a-text></a-box>
+  </a-entity>
+
+</a-scene>
+</body>
+</html>
