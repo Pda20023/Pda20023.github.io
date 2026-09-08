@@ -11,7 +11,8 @@
         CRITICAL: 'critical',
         STABLE: 'stable',
         POWERED: 'powered',
-        ESCAPED: 'escaped'
+        ESCAPED: 'escaped',
+        DEAD: 'dead'
       };
 
       AFRAME.registerComponent('flicker', {
@@ -22,7 +23,7 @@
 
       AFRAME.registerComponent('game-manager', {
         schema: {
-          oxygenTime: {type: 'number', default: 3500}, 
+          oxygenTime: {type: 'number', default: 60}, // Now strictly 60 seconds
           state: {type: 'string', default: GAME_STATE.INTRO}, 
           keypadCode: {type: 'array', default: ['btn3', 'btn1', 'btn2']}, 
           currentInput: {type: 'number', default: 0}
@@ -46,27 +47,32 @@
           this.el.setAttribute('game-manager', 'state', newState);
         },
 
-        tick: function () {
+        // Tick now uses accurate Delta Time, preventing FPS bugs
+        tick: function (time, delta) {
           if (this.data.state === GAME_STATE.CRITICAL) {
-            this.data.oxygenTime--;
+            this.data.oxygenTime -= (delta / 1000); // Subtract seconds based on real time
             
-            if (this.data.oxygenTime < 1000 && this.data.oxygenTime > 0) {
-              var flash = (this.data.oxygenTime % 20 < 10) ? '#ff0000' : '#ffffff';
-              this.updateHUD('CRITICAL WARNING!\nOXYGEN: ' + Math.round(this.data.oxygenTime / 100) + '%', flash);
-            } else {
-              this.updateHUD('WARNING: LIFE SUPPORT FAILING\nOXYGEN: ' + Math.round(this.data.oxygenTime / 100) + '%', '#ff3333');
+            var oxygenPercent = Math.max(0, Math.ceil((this.data.oxygenTime / 60) * 100));
+            var secondsLeft = Math.max(0, Math.ceil(this.data.oxygenTime));
+            
+            if (this.data.oxygenTime < 15 && this.data.oxygenTime > 0) {
+              var flash = (Math.floor(time / 250) % 2 === 0) ? '#ff0000' : '#ffffff';
+              this.updateHUD('CRITICAL WARNING!\nTIME: ' + secondsLeft + 's\nOXYGEN: ' + oxygenPercent + '%', flash);
+            } else if (this.data.oxygenTime > 0) {
+              this.updateHUD('WARNING: LIFE SUPPORT FAILING\nTIME: ' + secondsLeft + 's\nOXYGEN: ' + oxygenPercent + '%', '#ff3333');
             }
             
             if (this.data.oxygenTime <= 0) {
               this.updateHUD('ASPHYXIATION\nSYSTEM SHUTDOWN', '#ff0000');
               document.querySelector('a-scene').setAttribute('fog', 'color: black; near: 0; far: 4');
               if(this.alarmAudio) this.alarmAudio.pause();
+              this.changeState(GAME_STATE.DEAD); // Stop ticking
             }
           }
         },
 
         triggerAction: function(targetId, el) {
-          if (this.data.state === GAME_STATE.ESCAPED || this.data.oxygenTime <= 0) return;
+          if (this.data.state === GAME_STATE.ESCAPED || this.data.state === GAME_STATE.DEAD) return;
 
           if (this.data.state === GAME_STATE.INTRO && targetId === 'start-btn') {
             this.handleIntro(el);
@@ -86,7 +92,8 @@
         handleIntro: function(el) {
           this.changeState(GAME_STATE.CRITICAL);
           el.setAttribute('visible', 'false');
-          el.setAttribute('position', '0 1000 0'); 
+          el.removeAttribute('scannable'); // Fix: completely removes it so player can't gaze at it again
+          
           if(this.alarmAudio) this.alarmAudio.play().catch(e => console.log(e));
           document.querySelector('a-scene').setAttribute('fog', 'color: #1a0000; near: 2; far: 20'); 
         },
@@ -105,7 +112,7 @@
           this.changeState(GAME_STATE.STABLE);
           this.updateHUD('LIFE SUPPORT STABILIZED\nUNLOCK POWER CORE');
           
-          this.alarm.setAttribute('animation__rot', 'enabled: false');
+          this.alarm.removeAttribute('animation__rot'); // Fix: cleaner removal
           this.alarm.setAttribute('visible', 'false');
           if(this.alarmAudio) this.alarmAudio.pause();
           
@@ -190,10 +197,11 @@
 
       AFRAME.registerComponent('scannable', {
         init: function () {
-          // ΔΙΟΡΘΩΣΗ BUG: Ο Διαχειριστής ψάχνεται τη στιγμή του κλικ, όχι νωρίτερα!
           this.el.addEventListener('click', () => { 
-            var game = document.querySelector('a-scene').components['game-manager'];
-            if(game) game.triggerAction(this.el.id, this.el); 
+            var scene = document.querySelector('a-scene');
+            if (scene && scene.components['game-manager']) {
+              scene.components['game-manager'].triggerAction(this.el.id, this.el);
+            }
           });
           
           this.el.addEventListener('mouseenter', () => {
@@ -212,7 +220,8 @@
   <body>
     <a-scene id="s1" physics="debug: false" fog="color: black; near: 0; far: 3" shadow="type: pcfsoft" game-manager>
       
-      <a-assets timeout="3000">
+      <!-- Bumped timeout to 10000ms so 3d models don't fail on slightly slow internet -->
+      <a-assets timeout="10000">
         <a-asset-item id="sphere-model" src="sphere.glb"></a-asset-item>
         <img id="stars" src="eso0932a.jpg">
         <img id="earth" src="flat_earth03.jpg">
@@ -252,7 +261,9 @@
 
         <a-text id="hud-text" value="" align="center" position="0 1.2 -2" color="#ff3333" width="6" font="exo2bold"></a-text>
         
+        <!-- Fix: raycaster parameter limits ray to elements with the 'scannable' attribute -->
         <a-entity cursor="fuse: true; fuseTimeout: 1500"
+                  raycaster="objects: [scannable]; far: 30" 
                   position="0 0 -1"
                   geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
                   material="color: cyan; shader: flat"
