@@ -19,9 +19,25 @@
     }
   });
 
+  AFRAME.registerComponent('natural-sway', {
+    init: function () {
+      var rotation = this.el.getAttribute('rotation') || {x: 0, y: 0, z: 0};
+      var amount = 0.4 + Math.random() * 0.8;
+      var duration = 3500 + Math.random() * 3500;
+      var delay = Math.random() * 2000;
+
+      this.el.setAttribute(
+        'animation__sway',
+        'property: rotation.z; from: ' + (rotation.z - amount) + '; to: ' +
+        (rotation.z + amount) + '; dir: alternate; loop: true; dur: ' +
+        duration + '; delay: ' + delay + '; easing: easeInOutSine'
+      );
+    }
+  });
+
   AFRAME.registerComponent('game-manager', {
     schema: {
-      lightTime: {type: 'number', default: 3500},
+      lightTime: {type: 'number', default: 60},
       state: {type: 'string', default: GAME_STATE.INTRO},
       keypadCode: {type: 'array', default: ['btn3', 'btn1', 'btn2']},
       currentInput: {type: 'number', default: 0}
@@ -34,13 +50,27 @@
       this.creepyAudio = document.getElementById('snd-creepy');
       this.windAudio = document.getElementById('snd-wind');
       this.cricketsAudio = document.getElementById('snd-crickets');
+      this.runeAudio = document.getElementById('snd-rune');
+      this.wrongAudio = document.getElementById('snd-wrong');
+      this.successAudio = document.getElementById('snd-success');
+      this.doorAudio = document.getElementById('snd-door');
       this.restartBtn = document.getElementById('restart-btn');
+      this.sporeTrail = document.getElementById('spore-trail');
+      this.sporeLight = document.getElementById('spore-light');
+      this.portal = document.getElementById('portal-glow');
+      this.maxLightTime = this.data.lightTime;
       this.gameOverTriggered = false;
     },
 
     updateHUD: function(message, color = '#33ff33') {
       this.ui.setAttribute('value', message);
       this.ui.setAttribute('color', color);
+    },
+
+    playSound: function(audio) {
+      if (!audio) return;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
     },
 
     endGame: function(message, color) {
@@ -58,25 +88,25 @@
       this.el.setAttribute('game-manager', 'state', newState);
     },
 
-    tick: function () {
-      if (this.data.state === GAME_STATE.CRITICAL) {
-        if (this.data.lightTime > 0) this.data.lightTime--;
+    tick: function (time, delta) {
+      if (this.data.state !== GAME_STATE.CRITICAL || this.gameOverTriggered) return;
 
-        if (this.data.lightTime <= 0) {
-          if (!this.gameOverTriggered) {
-            this.gameOverTriggered = true;
-            this.endGame('CONSUMED BY THE WOODS', '#ff0000');
-            document.querySelector('a-scene').setAttribute('fog', 'color: black; near: 0; far: 2');
-          }
-          return;
-        }
+      this.data.lightTime = Math.max(0, this.data.lightTime - (delta / 1000));
+      var lightPercent = Math.ceil((this.data.lightTime / this.maxLightTime) * 100);
+      var secondsLeft = Math.ceil(this.data.lightTime);
 
-        if (this.data.lightTime < 1000) {
-          var flash = (this.data.lightTime % 20 < 10) ? '#ff0000' : '#ffffff';
-          this.updateHUD('THE DARKNESS IS HERE!\nLIGHT: ' + Math.round(this.data.lightTime / 100) + '%', flash);
-        } else {
-          this.updateHUD('THE FOG IS CLOSING IN...\nLIGHT: ' + Math.round(this.data.lightTime / 100) + '%', '#ff8800');
-        }
+      if (this.data.lightTime <= 0) {
+        this.gameOverTriggered = true;
+        this.endGame('CONSUMED BY THE WOODS', '#ff0000');
+        document.querySelector('a-scene').setAttribute('fog', 'color: black; near: 0; far: 2');
+        return;
+      }
+
+      if (this.data.lightTime <= 15) {
+        var flash = (Math.floor(time / 250) % 2 === 0) ? '#ff0000' : '#ffffff';
+        this.updateHUD('THE DARKNESS IS HERE!\nTIME: ' + secondsLeft + 's\nLIGHT: ' + lightPercent + '%', flash);
+      } else {
+        this.updateHUD('THE FOG IS CLOSING IN...\nTIME: ' + secondsLeft + 's\nLIGHT: ' + lightPercent + '%', '#ff8800');
       }
     },
 
@@ -131,6 +161,24 @@
       this.ambient.setAttribute('intensity', '0.6');
       this.ambient.removeAttribute('flicker');
 
+      if (this.sporeTrail) this.sporeTrail.setAttribute('visible', false);
+      if (this.sporeLight) this.sporeLight.setAttribute('visible', false);
+
+      document.querySelector('a-scene').setAttribute(
+        'animation__clearfog',
+        'property: fog.far; to: 45; dur: 2500; easing: easeOutQuad'
+      );
+
+      ['btn1', 'btn2', 'btn3'].forEach((id, index) => {
+        var rune = document.getElementById(id);
+        rune.setAttribute('material', 'emissive', '#ff4400');
+        rune.setAttribute('material', 'emissiveIntensity', 0.5);
+        rune.setAttribute(
+          'animation__runeGlow',
+          'property: material.emissiveIntensity; from: 0.2; to: 1; dir: alternate; loop: true; dur: 900; delay: ' + (index * 200)
+        );
+      });
+
       this.absorbItem(el);
     },
 
@@ -141,13 +189,17 @@
 
       if (targetId === expected) {
         this.data.currentInput++;
+        this.playSound(this.runeAudio);
         el.setAttribute('material', 'color', '#00ff00');
 
         if (this.data.currentInput === 3) {
           this.changeState(GAME_STATE.POWERED);
+          this.playSound(this.successAudio);
+          if (this.portal) this.portal.setAttribute('visible', true);
           this.updateHUD('RUNES ACCEPTED\nENTER THE ARCHWAY', '#00ffff');
         }
       } else {
+        this.playSound(this.wrongAudio);
         this.resetKeypad();
       }
     },
@@ -170,6 +222,7 @@
     handleDoor: function() {
       if (this.data.state === GAME_STATE.POWERED) {
         this.changeState(GAME_STATE.ESCAPED);
+        this.playSound(this.doorAudio);
         this.endGame('YOU ESCAPED THE FOREST', '#00ffff');
 
         // Κάνει την αψίδα να βυθιστεί ή να κινηθεί για να περάσεις
@@ -223,18 +276,26 @@
     <a-asset-item id="rock-model" src="rock.glb"></a-asset-item>
     <a-asset-item id="arch-model" src="archway.glb"></a-asset-item>
     <a-asset-item id="log-model" src="log.glb"></a-asset-item>
+    <img id="ground-texture" src="forest-ground.jpg">
 
     <!-- Αν οι ήχοι είναι .wav άλλαξε την κατάληξη παρακάτω -->
     <audio id="snd-wind" src="wind.mp3" preload="auto" loop></audio>
     <audio id="snd-creepy" src="creepy.mp3" preload="auto" loop></audio>
     <audio id="snd-crickets" src="crickets.mp3" preload="auto" loop></audio>
+    <audio id="snd-rune" src="rune.mp3" preload="auto"></audio>
+    <audio id="snd-wrong" src="wrong.mp3" preload="auto"></audio>
+    <audio id="snd-success" src="success.mp3" preload="auto"></audio>
+    <audio id="snd-door" src="door.mp3" preload="auto"></audio>
   </a-assets>
 
   <!-- Σκοτεινός ουρανός δάσους -->
-  <a-sky color="#03080c"></a-sky>
+  <a-sky src="eso0932a.jpg" rotation="0 90 0"></a-sky>
+
+  <!-- Μεγάλη φωτεινή σελήνη ψηλά στον ουρανό -->
+  <a-sphere src="moon.jpg" radius="8" position="0 35 -40" material="emissive: #fff; emissiveIntensity: 0.6"></a-sphere>
 
   <!-- Χώμα/Γρασίδι - Πάτωμα (Χρησιμοποιούμε χρώμα δάσους αντί για μέταλλο) -->
-  <a-plane static-body width="100" height="100" position="0 0 0" rotation="-90 0 0" material="color: #1b2611; roughness: 0.9"></a-plane>
+  <a-plane static-body width="100" height="100" position="0 0 0" rotation="-90 0 0" material="src: #ground-texture; repeat: 20 20; roughness: 1" shadow="receive: true"></a-plane>
 
   <!-- Αόρατοι τοίχοι (για να μην βγεις εκτός δάσους) -->
   <a-plane static-body width="30" height="10" position="-15 5 0" rotation="0 90 0" visible="false"></a-plane>
@@ -243,18 +304,38 @@
   <a-plane static-body width="30" height="10" position="0 5 -15" visible="false"></a-plane>
 
   <a-light id="ambient-light" type="ambient" intensity="0.2" color="#4455aa" flicker></a-light>
+  <a-light id="moonlight" type="directional" color="#8fa8ff" intensity="0.45" position="0 35 -40" cast-shadow="true" shadow-camera-far="80" shadow-camera-left="-25" shadow-camera-right="25" shadow-camera-top="25" shadow-camera-bottom="-25"></a-light>
 
   <!-- Διακόσμηση Δάσους (Δέντρα γύρω γύρω) -->
-  <a-entity gltf-model="#tree-model" position="-8 0 -8" scale="2 2 2"></a-entity>
-  <a-entity gltf-model="#tree-model" position="8 0 -5" scale="2.5 2.5 2.5"></a-entity>
-  <a-entity gltf-model="#tree-model" position="-5 0 8" scale="1.8 1.8 1.8"></a-entity>
-  <a-entity gltf-model="#tree-model" position="5 0 10" scale="2 2 2"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-8 0 -8" scale="5 5 5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="8 0 -5" scale="6 6 6"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: true" natural-sway position="-5 0 8" scale="4.5 4.5 4.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: true" natural-sway position="5 0 10" scale="5 5 5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-12 0 -12" rotation="0 15 0" scale="6.5 6.5 6.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="12 0 -12" rotation="0 200 0" scale="5.5 5.5 5.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-12 0 12" rotation="0 80 0" scale="6 6 6"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="12 0 12" rotation="0 310 0" scale="5 5 5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="3 0 -10" rotation="0 45 0" scale="5 5 5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-3 0 -11" rotation="0 260 0" scale="5.5 5.5 5.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="10 0 2" rotation="0 120 0" scale="6 6 6"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-10 0 3" rotation="0 200 0" scale="5 5 5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="10 0 -2" rotation="0 10 0" scale="4.5 4.5 4.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-9 0 -2" rotation="0 340 0" scale="5.5 5.5 5.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: true" natural-sway position="2 0 12" rotation="0 70 0" scale="6 6 6"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: true" natural-sway position="-2 0 11" rotation="0 150 0" scale="5 5 5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="13 0 8" rotation="0 220 0" scale="5.5 5.5 5.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-13 0 8" rotation="0 30 0" scale="6 6 6"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: true" natural-sway position="0 0 5" rotation="0 100 0" scale="4.5 4.5 4.5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="7 0 6" rotation="0 190 0" scale="5 5 5"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: true" natural-sway position="4 0 6" rotation="0 15 0" scale="3 3 3"></a-entity>
+  <a-entity gltf-model="#tree-model" shadow="cast: false" natural-sway position="-4 0 5" rotation="0 260 0" scale="3.2 3.2 3.2"></a-entity>
 
   <!-- Οδηγία για τον κωδικό στους ρούνους -->
   <a-text value="ANCIENT RUNES:\n3 - 1 - 2" position="14.9 4 -5" rotation="0 -90 0" color="#ffaa00" align="center" scale="2 2 2" opacity="0.7"></a-text>
 
   <!-- Η Πύλη / Archway -->
-  <a-entity id="exit-door" gltf-model="#arch-model" position="0 0 -14.8" scale="1.5 1.5 1.5" scannable></a-entity>
+  <a-entity id="exit-door" gltf-model="#arch-model" shadow="cast: true; receive: true" position="0 0 -14.8" scale="1.5 1.5 1.5" scannable></a-entity>
+  <a-circle id="portal-glow" position="0 2.5 -14.6" radius="2.2" visible="false" material="shader: flat; color: #66ffff; transparent: true; opacity: 0.15; side: double" animation__portalPulse="property: material.opacity; from: 0.15; to: 0.7; dir: alternate; loop: true; dur: 1200"></a-circle>
 
   <a-camera id="cam" position="0 2.5 10">
     <!-- Κείμενο Εκκίνησης -->
@@ -278,14 +359,26 @@
     </a-entity>
   </a-camera>
 
-  <!-- Το μαγικό μανιτάρι που μαζεύεις (Αντικαθιστά τη Σφαίρα) -->
-  <a-entity id="mushroom" gltf-model="#mushroom-model" scale="2 2 2" position="-6 1 -6" scannable animation="property: position; to: -6 1.2 -6; dir: alternate; loop: true; dur: 2000"></a-entity>
+  <!-- Μαγικό μονοπάτι από φωτεινά σπόρια -->
+  <a-entity id="spore-trail">
+    <a-sphere position="0 0.7 7" radius="0.05" material="shader: flat; color: #aaff77; transparent: true; opacity: 0.8" animation="property: position; to: 0 1.2 7; dir: alternate; loop: true; dur: 1600"></a-sphere>
+    <a-sphere position="-1 1 4" radius="0.04" material="shader: flat; color: #ccff99; transparent: true; opacity: 0.7" animation="property: position; to: -1 1.5 4; dir: alternate; loop: true; dur: 2100"></a-sphere>
+    <a-sphere position="-2 0.8 1" radius="0.06" material="shader: flat; color: #99ff66; transparent: true; opacity: 0.75" animation="property: position; to: -2 1.4 1; dir: alternate; loop: true; dur: 1800"></a-sphere>
+    <a-sphere position="-3.5 1.1 -2" radius="0.04" material="shader: flat; color: #bbff88; transparent: true; opacity: 0.7" animation="property: position; to: -3.5 1.6 -2; dir: alternate; loop: true; dur: 2300"></a-sphere>
+    <a-sphere position="-5 0.9 -4" radius="0.06" material="shader: flat; color: #aaff77; transparent: true; opacity: 0.8" animation="property: position; to: -5 1.5 -4; dir: alternate; loop: true; dur: 1900"></a-sphere>
+    <a-sphere position="-6 1.2 -5.5" radius="0.05" material="shader: flat; color: #ddffaa; transparent: true; opacity: 0.85" animation="property: position; to: -6 1.8 -5.5; dir: alternate; loop: true; dur: 1700"></a-sphere>
+  </a-entity>
+
+  <a-light id="spore-light" type="point" position="-6 1.5 -6" color="#99ff66" intensity="1.2" distance="7" decay="2"></a-light>
+
+  <!-- Το μαγικό μανιτάρι που μαζεύεις -->
+  <a-entity id="mushroom" gltf-model="#mushroom-model" scale="0.4 0.4 0.4" position="-6 1 -6" scannable animation="property: position; to: -6 1.2 -6; dir: alternate; loop: true; dur: 2000"></a-entity>
 
   <!-- Φυσικά εμπόδια (Βράχοι) αντί για κιβώτια -->
-  <a-entity id="rock1" gltf-model="#rock-model" dynamic-body="mass: 5" position="-5.5 4 -5" scale="1.5 1.5 1.5" scannable></a-entity>
-  <a-entity id="rock2" gltf-model="#rock-model" dynamic-body="mass: 5" position="-6.5 6 -5" scale="1.2 1.2 1.2" scannable></a-entity>
-  <a-entity id="rock3" gltf-model="#rock-model" dynamic-body="mass: 5" position="-5.5 8 -6" scale="1.4 1.4 1.4" scannable></a-entity>
-  <a-entity id="log1" gltf-model="#log-model" dynamic-body="mass: 8" position="-4.5 6 -6.5" scale="1.6 1.6 1.6" scannable></a-entity>
+  <a-entity id="rock1" gltf-model="#rock-model" shadow="cast: true; receive: true" dynamic-body="mass: 5" position="-5.5 4 -5" scale="2 2 2" scannable></a-entity>
+  <a-entity id="rock2" gltf-model="#rock-model" shadow="cast: true; receive: true" dynamic-body="mass: 5" position="-6.5 6 -5" scale="1.6 1.6 1.6" scannable></a-entity>
+  <a-entity id="rock3" gltf-model="#rock-model" shadow="cast: true; receive: true" dynamic-body="mass: 5" position="-5.5 8 -6" scale="1.8 1.8 1.8" scannable></a-entity>
+  <a-entity id="log1" gltf-model="#log-model" shadow="cast: true; receive: true" dynamic-body="mass: 8" position="-4.5 6 -6.5" scale="2 2 2" scannable></a-entity>
 
   <!-- Ο Γρίφος (Οι 3 πέτρες / Runes) -->
   <a-entity position="6 1 -5" rotation="0 -30 0">
