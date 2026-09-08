@@ -74,6 +74,52 @@
       }
     });
 
+    AFRAME.registerComponent('non-interactive', {
+      init: function () {
+        var el = this.el;
+        var disableRaycast = function () {
+          el.object3D.traverse(function (object) {
+            object.raycast = function () {};
+          });
+        };
+        el.addEventListener('loaded', disableRaycast);
+        el.addEventListener('object3dset', disableRaycast);
+        setTimeout(disableRaycast, 0);
+      }
+    });
+
+    AFRAME.registerComponent('steam-burst', {
+      init: function () {
+        var el = this.el;
+        var activated = false;
+
+        el.addEventListener('activate', function () {
+          if (activated) return;
+          activated = true;
+
+          for (var i = 0; i < 24; i++) {
+            let particle = document.createElement('a-sphere');
+            var x = Math.random() * 6.4 - 3.2;
+            var y = Math.random() * 3.6 + 0.4;
+            var z = Math.random() * 0.3;
+            var duration = Math.random() * 650 + 950;
+
+            particle.setAttribute('non-interactive', '');
+            particle.setAttribute('radius', Math.random() * 0.18 + 0.12);
+            particle.setAttribute('position', x + ' ' + y + ' ' + z);
+            particle.setAttribute('material', 'color: #d9f4ff; shader: flat; transparent: true; opacity: 0.42');
+            particle.setAttribute('animation__move', 'property: position; to: ' + (x * 1.15) + ' ' + (y + 2.4) + ' ' + (z + 2.2) + '; dur: ' + duration + '; easing: easeOutQuad');
+            particle.setAttribute('animation__fade', 'property: material.opacity; from: 0.42; to: 0; dur: ' + duration + '; easing: easeOutQuad');
+            el.appendChild(particle);
+
+            setTimeout(function () {
+              particle.remove();
+            }, duration + 100);
+          }
+        });
+      }
+    });
+
     AFRAME.registerComponent('focusing', {
       init: function () {
         var el = this.el;
@@ -83,8 +129,13 @@
           if (el.id == "door") {
             if (!locked && time >= 0) {
               el.components.sound.playSound();
+              document.getElementById('creepy').components.sound.stopSound();
               message = "Mission Accomplished! You Escaped!";
               gas = false;
+              document.getElementById('airlock-steam').emit('activate');
+              var flash = document.getElementById('victory-flash');
+              flash.setAttribute('animation__flashin', 'property: material.opacity; from: 0; to: 0.72; dur: 170; easing: easeOutQuad');
+              flash.setAttribute('animation__flashout', 'property: material.opacity; from: 0.72; to: 0; dur: 900; delay: 170; easing: easeInQuad');
               el.setAttribute('animation', 'property: position; to: 0 10 -14.6; dur: 3000');
             }
             return;
@@ -93,6 +144,11 @@
               locked = false;
               el.setAttribute('material', 'color: #4dff9a');
               document.getElementById('keypad-label').setAttribute('value', 'UNLOCKED');
+              var strips = document.querySelectorAll('.door-strip');
+              for (var i = 0; i < strips.length; i++) {
+                strips[i].setAttribute('material', 'color', '#4dff9a');
+                strips[i].setAttribute('material', 'emissive', '#4dff9a');
+              }
             }
             return;
           }
@@ -147,9 +203,15 @@
 
     <a-entity id="door" position="0 4 -14.6" sound="src: #snd-door" focusing>
       <a-box width="7" height="8" depth="0.55" material="color: #142431; metalness: 0.8"></a-box>
+      <a-box class="door-strip" width="0.14" height="8.2" depth="0.1" position="-3.56 0 0.35" material="color: #ff2438; emissive: #ff2438; emissiveIntensity: 1.6"></a-box>
+      <a-box class="door-strip" width="0.14" height="8.2" depth="0.1" position="3.56 0 0.35" material="color: #ff2438; emissive: #ff2438; emissiveIntensity: 1.6"></a-box>
+      <a-box class="door-strip" width="7.25" height="0.14" depth="0.1" position="0 4.06 0.35" material="color: #ff2438; emissive: #ff2438; emissiveIntensity: 1.6"></a-box>
+      <a-box class="door-strip" width="7.25" height="0.14" depth="0.1" position="0 -4.06 0.35" material="color: #ff2438; emissive: #ff2438; emissiveIntensity: 1.6"></a-box>
       <a-torus radius="1.05" radius-tubular="0.07" position="0 0 0.32" material="color: #416070"></a-torus>
       <a-text value="AIRLOCK" align="center" position="0 1.85 0.34" color="#97d7e8" width="4"></a-text>
     </a-entity>
+
+    <a-entity id="airlock-steam" position="0 0 -14.1" steam-burst non-interactive></a-entity>
 
     <a-entity id="stabilizer" position="-6 0 -6" focusing>
       <a-cylinder radius="1.25" height="0.7" position="0 0.35 0" material="color: #26394c; metalness: 0.8"></a-cylinder>
@@ -166,6 +228,11 @@
     </a-entity>
 
     <a-camera id="cam" position="0 2.4 10">
+      <a-entity id="title-card" position="0 0 -1.45" non-interactive>
+        <a-plane width="2.9" height="0.72" material="color: #020814; shader: flat; transparent: true; opacity: 0" animation__panelin="property: material.opacity; from: 0; to: 0.78; dur: 900; delay: 150" animation__panelout="property: material.opacity; from: 0.78; to: 0; dur: 900; delay: 3100"></a-plane>
+        <a-text value="ORBITAL LOCKDOWN\nRestore oxygen and escape." align="center" position="0 0 0.01" color="#bcefff" width="2.65" opacity="0" animation__titlein="property: text.opacity; from: 0; to: 1; dur: 900; delay: 250" animation__titleout="property: text.opacity; from: 1; to: 0; dur: 900; delay: 3000"></a-text>
+      </a-entity>
+      <a-plane id="victory-flash" position="0 0 -0.6" width="4" height="3" material="color: #d9fbff; shader: flat; transparent: true; opacity: 0; depthTest: false" non-interactive></a-plane>
       <a-text updating value="" align="center" geometry="primitive: plane; width: 6; height: 1" position="0 0.5 -1.5" material="opacity: 0" color="#9dfcff"></a-text>
       <a-cursor color="cyan" fuse="true" far="10"></a-cursor>
     </a-camera>
