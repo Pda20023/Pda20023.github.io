@@ -205,6 +205,42 @@
       }
     });
 
+    AFRAME.registerComponent('obstacle-collision', {
+      schema: {
+        radius: {default: 0.5}
+      },
+
+      init: function () {
+        var pos = this.el.getAttribute('position');
+        this.lastSafe = {x: pos.x, y: pos.y, z: pos.z};
+      },
+
+      tick: function () {
+        if (ended) return;
+        var pos = this.el.getAttribute('position');
+        var obstacles = document.querySelectorAll('.obstacle');
+        var blocked = false;
+
+        for (var i = 0; i < obstacles.length; i++) {
+          var obstaclePos = obstacles[i].getAttribute('position');
+          var size = obstacles[i].getAttribute('geometry');
+          var limitX = size.width / 2 + this.data.radius;
+          var limitZ = size.depth / 2 + this.data.radius;
+
+          if (Math.abs(pos.x - obstaclePos.x) < limitX && Math.abs(pos.z - obstaclePos.z) < limitZ) {
+            blocked = true;
+            break;
+          }
+        }
+
+        if (blocked) {
+          this.el.setAttribute('position', this.lastSafe);
+        } else {
+          this.lastSafe = {x: pos.x, y: pos.y, z: pos.z};
+        }
+      }
+    });
+
     AFRAME.registerComponent('focusing', {
       init: function () {
         var el = this.el;
@@ -289,6 +325,14 @@
     <a-plane width="30" height="10" position="0 5 -15" material="color: #0b111b; metalness: 0.75"></a-plane>
     <a-plane width="30" height="30" position="0 10 0" rotation="90 0 0" material="color: #080c13; metalness: 0.9"></a-plane>
 
+    <a-box class="obstacle" width="2.2" height="2.2" depth="2.2" position="-3.5 1.1 4.5" material="color: #263649; metalness: 0.75; roughness: 0.5"></a-box>
+    <a-box class="obstacle" width="1.6" height="1.6" depth="1.6" position="4.5 0.8 4" material="color: #344459; metalness: 0.7; roughness: 0.55"></a-box>
+    <a-box class="obstacle" width="2.4" height="2.4" depth="2.4" position="-9 1.2 1" material="color: #293a4d; metalness: 0.8; roughness: 0.48"></a-box>
+    <a-box class="obstacle" width="2" height="2" depth="2" position="9.5 1 -1" material="color: #31465a; metalness: 0.72; roughness: 0.52"></a-box>
+    <a-box class="obstacle" width="1.8" height="1.8" depth="1.8" position="-2.5 0.9 -7.5" material="color: #2b3d50; metalness: 0.78; roughness: 0.5"></a-box>
+    <a-box class="obstacle" width="2.5" height="2.5" depth="2.5" position="3.5 1.25 -10" material="color: #25384b; metalness: 0.82; roughness: 0.45"></a-box>
+    <a-box class="obstacle" width="1.5" height="1.5" depth="1.5" position="10.5 0.75 8" material="color: #37495c; metalness: 0.68; roughness: 0.58"></a-box>
+
     <a-entity id="door" position="0 4 -14.6" sound="src: #snd-door" focusing>
       <a-box width="7" height="8" depth="0.55" material="color: #142431; metalness: 0.8"></a-box>
       <a-box class="door-strip" width="0.14" height="8.2" depth="0.1" position="-3.56 0 0.35" material="color: #ff2438; emissive: #ff2438; emissiveIntensity: 1.6"></a-box>
@@ -315,7 +359,7 @@
       </a-box>
     </a-entity>
 
-    <a-camera id="cam" position="0 2.4 10">
+    <a-camera id="cam" position="0 2.4 10" obstacle-collision>
       <a-entity id="ending-screen" position="0 0 -1.05" visible="false" non-interactive>
         <a-plane id="ending-panel" width="1.95" height="1.15" material="color: #020814; shader: flat; transparent: true; opacity: 0"></a-plane>
         <a-text id="ending-title" value="MISSION ACCOMPLISHED" align="center" position="0 0.22 0.01" color="#63ffb0" width="1.8" opacity="0"></a-text>
