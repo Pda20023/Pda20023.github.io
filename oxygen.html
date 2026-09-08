@@ -33,6 +33,47 @@
       }
     });
 
+    AFRAME.registerComponent('dust-field', {
+      init: function () {
+        var count = 100;
+        var positions = new Float32Array(count * 3);
+
+        for (var i = 0; i < count; i++) {
+          positions[i * 3] = Math.random() * 28 - 14;
+          positions[i * 3 + 1] = Math.random() * 8.5 + 0.5;
+          positions[i * 3 + 2] = Math.random() * 28 - 14;
+        }
+
+        var geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        var material = new THREE.PointsMaterial({
+          color: 0x9fdcff,
+          size: 0.045,
+          transparent: true,
+          opacity: 0.48,
+          depthWrite: false
+        });
+
+        this.points = new THREE.Points(geometry, material);
+        this.points.raycast = function () {};
+        this.el.setObject3D('dust', this.points);
+      },
+
+      tick: function (time, delta) {
+        if (!this.points) return;
+        this.points.rotation.y += delta * 0.000025;
+        this.points.position.y = Math.sin(time * 0.00025) * 0.16;
+      },
+
+      remove: function () {
+        if (!this.points) return;
+        this.points.geometry.dispose();
+        this.points.material.dispose();
+        this.el.removeObject3D('dust');
+      }
+    });
+
     AFRAME.registerComponent('focusing', {
       init: function () {
         var el = this.el;
@@ -63,6 +104,7 @@
               power = true;
               gas = false;
               document.getElementById('alarm').components.sound.stopSound();
+              document.getElementById('creepy').components.sound.playSound();
               document.getElementById('ambient').setAttribute('light', 'color', '#19a8be');
               var emergency = document.getElementById('emergency');
               emergency.removeAttribute('animation__pulse');
@@ -85,9 +127,12 @@
     <a-assets>
       <audio id="snd-door" src="door.mp3"></audio>
       <audio id="snd-alarm" src="alarm.mp3" preload="auto"></audio>
+      <audio id="snd-creepy" src="creepy.mp3" preload="auto"></audio>
     </a-assets>
 
     <a-entity id="alarm" sound="src: #snd-alarm; autoplay: true; loop: true"></a-entity>
+    <a-entity id="creepy" sound="src: #snd-creepy; loop: true; volume: 0.55"></a-entity>
+    <a-entity dust-field></a-entity>
     <a-light id="emergency" type="point" color="#ff2438" intensity="0.35" distance="30" position="0 8 0" animation__pulse="property: light.intensity; from: 0.2; to: 1.8; dur: 650; dir: alternate; loop: true; easing: easeInOutSine"></a-light>
 
     <a-light id="ambient" type="ambient" color="#152342" intensity="0.32"></a-light>
