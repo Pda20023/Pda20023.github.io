@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Oxygen - Orbital Lockdown</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  
+  <script>
+    var locked = true, power = false, gas = true, message = "", time = 5000;
+    
+    AFRAME.registerComponent('updating', {
+      tick: function () {
+        if (gas) time--;
+        if (time <= 0) message = "Oxygen depleted... Game Over";
+        
+        if (message != "") {
+          this.el.setAttribute('value', message);
+          this.el.setAttribute('color', 'red');
+        } else {
+          var objective = !power ? 'Find the blue Stabilizer' : (locked ? 'Power restored - hack the keypad' : 'Airlock unlocked - escape!');
+          this.el.setAttribute('value', 'OXYGEN: ' + Math.round(time / 100) + '%\n' + objective);
+        }
+        
+        var pos = document.getElementById('cam').getAttribute('position');
+        if (pos.x < -14) pos.x = -14;
+        if (pos.x > 14) pos.x = 14;
+        if (pos.z < -14) pos.z = -14;
+        if (pos.z > 14) pos.z = 14;
+        document.getElementById('cam').setAttribute('position', pos);
+      }
+    });
+
+    AFRAME.registerComponent('focusing', {
+      init: function () {
+        var el = this.el;
+        el.addEventListener('mouseenter', function () {
+          var pos = document.getElementById('cam').getAttribute('position');
+          
+          if (el.id == "door") {
+            if (!locked && time >= 0) { 
+              if (el.components.sound) el.components.sound.playSound(); 
+              message = "Mission Accomplished! You Escaped!"; 
+              gas = false;
+              el.setAttribute('animation', 'property: position; to: 0 10 -14.6; dur: 3000');
+            }
+            return;
+          } 
+          
+          else if (el.id == "keypad") {
+            if (power) {
+              locked = false;
+              el.setAttribute('material', 'color', '#4dff9a');
+              document.getElementById('keypad-text').setAttribute('value', 'UNLOCKED');
+            }
+            return;
+          }
+          
+          if (el.id == "stabilizer" || el.id == "tank") {
+            el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z + '; dur: 1000');
+            
+            if (el.id == "stabilizer") {
+              power = true;
+              document.getElementById('ambient').setAttribute('light', 'color', '#19a8be');
+              document.getElementById('keypad-text').setAttribute('value', 'READY');
+            } else if (el.id == "tank") {
+              time += 2000; 
+            }
+            
+            setTimeout(function () { el.remove(); }, 1500);
+          }
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+  <a-scene background="color: #02040d" fog="type: linear; color: #02040d; near: 2; far: 25">
+    
+    <a-assets>
+       <audio id="snd-door" src="door.mp3"></audio>
+       <audio id="snd-alarm" src="alarm.mp3"></audio>
+    </a-assets>
+
+    <a-light id="ambient" type="ambient" color="#152342" intensity="0.4"></a-light>
+    <a-light type="point" color="#ff2438" intensity="0.8" distance="20" position="0 7 0"></a-light>
+
+    <a-plane width="30" height="30" rotation="-90 0 0" material="color: #101722; metalness: 0.7"></a-plane>
+    <a-plane width="30" height="10" position="-15 5 0" rotation="0 90 0" material="color: #0b111b"></a-plane>
+    <a-plane width="30" height="10" position="15 5 0" rotation="0 -90 0" material="color: #0b111b"></a-plane>
+    <a-plane width="30" height="10" position="0 5 15" rotation="0 180 0" material="color: #0b111b"></a-plane>
+    <a-plane width="30" height="10" position="0 5 -15" material="color: #0b111b"></a-plane>
+    <a-plane width="30" height="30" position="0 10 0" rotation="90 0 0" material="color: #080c13"></a-plane>
+
+    <a-entity id="door" position="0 4 -14.6" sound="src: #snd-door" focusing>
+      <a-box width="7" height="8" depth="0.55" material="color: #142431; metalness: 0.8"></a-box>
+      <a-torus radius="1.05" radius-tubular="0.07" position="0 0 0.32" material="color: #416070"></a-torus>
+      <a-text value="AIRLOCK" align="center" position="0 1.85 0.34" color="#97d7e8" width="4"></a-text>
+    </a-entity>
+
+    <a-entity id="stabilizer" position="-6 0 -6" focusing>
+      <a-cylinder radius="1.25" height="0.7" position="0 0.35 0" material="color: #26394c"></a-cylinder>
+      <a-sphere radius="0.57" position="0 1.55 0" material="color: #47d8ff; opacity: 0.8"></a-sphere>
+    </a-entity>
+
+    <a-box id="tank" width="1.25" height="1.25" depth="1.25" position="-10 0.65 -10" material="color: #5b4538" focusing></a-box>
+
+    <a-entity position="6 0 -6" rotation="0 -28 0">
+      <a-box width="3.4" height="2.4" depth="1" position="0 1.2 0" material="color: #192536"></a-box>
+      <a-box id="keypad" width="1" height="0.8" depth="0.12" position="0 1.2 0.55" material="color: #ff5268" focusing>
+        <a-text id="keypad-text" value="LOCKED" align="center" position="0 0 0.1" color="#ffffff" width="3"></a-text>
+      </a-box>
+    </a-entity>
+
+    <a-camera id="cam" position="0 2.4 10">
+      <a-text updating value="" align="center" geometry="primitive: plane; width: 6; height: 1" position="0 0.5 -1.5" material="opacity: 0" color="#9dfcff"></a-text>
+      <a-cursor color="cyan" fuse="true" far="10"></a-cursor>
+    </a-camera>
+
+  </a-scene>
+</body>
+</html>
