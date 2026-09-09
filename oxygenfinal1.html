@@ -26,6 +26,14 @@
           this.el.setAttribute('value', 'OXYGEN: ' + Math.round(time / 100) + '%\n' + objective);
         }
         
+        var sceneEl = document.querySelector('a-scene');
+        if (gas) {
+          var visibility = Math.max(2, (time / 4000) * 25);
+          sceneEl.setAttribute('fog', 'far: ' + visibility);
+        } else {
+          sceneEl.setAttribute('fog', 'far: 25');
+        }
+        
         var pos = document.getElementById('cam').getAttribute('position');
         if (pos.x < -14) pos.x = -14;
         if (pos.x > 14) pos.x = 14;
@@ -75,6 +83,7 @@
               document.getElementById('keypad-text').setAttribute('value', 'READY');
             } else if (el.classList.contains("tank")) {
               time += 2000; 
+              if (time > 4000) time = 4000;
             }
             
             setTimeout(function () { el.remove(); }, 1200);
