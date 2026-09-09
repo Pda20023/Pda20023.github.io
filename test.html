@@ -6,16 +6,21 @@
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   
   <script>
-    var locked = true, power = false, gas = true, message = "", time = 5000;
+    var locked = true, power = false, gas = true, ended = false, message = "", time = 4000;
     
     AFRAME.registerComponent('updating', {
       tick: function () {
         if (gas) time--;
-        if (time <= 0) message = "Oxygen depleted... Game Over";
+        
+        if (gas && time <= 0 && !ended) {
+          message = "OXYGEN DEPLETED... MISSION FAILED";
+          ended = true;
+          document.getElementById('alarm').components.sound.stopSound();
+        }
         
         if (message != "") {
           this.el.setAttribute('value', message);
-          this.el.setAttribute('color', 'red');
+          this.el.setAttribute('color', '#ff5268');
         } else {
           var objective = !power ? 'Find the blue Stabilizer' : (locked ? 'Power restored - hack the keypad' : 'Airlock unlocked - escape!');
           this.el.setAttribute('value', 'OXYGEN: ' + Math.round(time / 100) + '%\n' + objective);
@@ -34,13 +39,16 @@
       init: function () {
         var el = this.el;
         el.addEventListener('mouseenter', function () {
+          if (ended) return;
           var pos = document.getElementById('cam').getAttribute('position');
           
           if (el.id == "door") {
             if (!locked && time >= 0) { 
               if (el.components.sound) el.components.sound.playSound(); 
-              message = "Mission Accomplished! You Escaped!"; 
+              document.getElementById('creepy').components.sound.stopSound();
+              message = "MISSION ACCOMPLISHED! YOU ESCAPED!"; 
               gas = false;
+              ended = true;
               el.setAttribute('animation', 'property: position; to: 0 10 -14.6; dur: 3000');
             }
             return;
@@ -55,18 +63,21 @@
             return;
           }
           
-          if (el.id == "stabilizer" || el.id == "tank") {
+          if (el.id == "stabilizer" || el.classList.contains("tank")) {
             el.setAttribute('animation', 'property: position; to: ' + pos.x + ' 0 ' + pos.z + '; dur: 1000');
             
             if (el.id == "stabilizer") {
               power = true;
+              gas = false;
+              document.getElementById('alarm').components.sound.stopSound();
+              document.getElementById('creepy').components.sound.playSound();
               document.getElementById('ambient').setAttribute('light', 'color', '#19a8be');
               document.getElementById('keypad-text').setAttribute('value', 'READY');
-            } else if (el.id == "tank") {
+            } else if (el.classList.contains("tank")) {
               time += 2000; 
             }
             
-            setTimeout(function () { el.remove(); }, 1500);
+            setTimeout(function () { el.remove(); }, 1200);
           }
         });
       }
@@ -74,17 +85,22 @@
   </script>
 </head>
 <body>
-  <a-scene background="color: #02040d" fog="type: linear; color: #02040d; near: 2; far: 25">
+  <a-scene id="s1" background="color: #02040d" fog="type: linear; color: #02040d; near: 2; far: 25">
     
     <a-assets>
        <audio id="snd-door" src="door.mp3"></audio>
        <audio id="snd-alarm" src="alarm.mp3"></audio>
+       <audio id="snd-creepy" src="creepy.mp3"></audio>
     </a-assets>
 
-    <a-light id="ambient" type="ambient" color="#152342" intensity="0.4"></a-light>
-    <a-light type="point" color="#ff2438" intensity="0.8" distance="20" position="0 7 0"></a-light>
+    <a-entity id="alarm" sound="src: #snd-alarm; autoplay: true; loop: true; volume: 0.8"></a-entity>
+    <a-entity id="creepy" sound="src: #snd-creepy; loop: true; volume: 0.6"></a-entity>
 
-    <a-plane width="30" height="30" rotation="-90 0 0" material="color: #101722; metalness: 0.7"></a-plane>
+    <a-light id="ambient" type="ambient" color="#152342" intensity="0.4"></a-light>
+    <a-light type="point" color="#ff2438" intensity="0.8" distance="20" position="0 7 0"
+             animation="property: light.intensity; from: 0.2; to: 1.2; dur: 800; dir: alternate; loop: true"></a-light>
+
+    <a-plane width="30" height="30" rotation="-90 0 0" material="color: #101722"></a-plane>
     <a-plane width="30" height="10" position="-15 5 0" rotation="0 90 0" material="color: #0b111b"></a-plane>
     <a-plane width="30" height="10" position="15 5 0" rotation="0 -90 0" material="color: #0b111b"></a-plane>
     <a-plane width="30" height="10" position="0 5 15" rotation="0 180 0" material="color: #0b111b"></a-plane>
@@ -92,22 +108,21 @@
     <a-plane width="30" height="30" position="0 10 0" rotation="90 0 0" material="color: #080c13"></a-plane>
 
     <a-entity id="door" position="0 4 -14.6" sound="src: #snd-door" focusing>
-      <a-box width="7" height="8" depth="0.55" material="color: #142431; metalness: 0.8"></a-box>
+      <a-box width="7" height="8" depth="0.55" material="color: #142431"></a-box>
       <a-torus radius="1.05" radius-tubular="0.07" position="0 0 0.32" material="color: #416070"></a-torus>
       <a-text value="AIRLOCK" align="center" position="0 1.85 0.34" color="#97d7e8" width="4"></a-text>
     </a-entity>
 
     <a-entity id="stabilizer" position="-6 0 -6" focusing>
       <a-cylinder radius="1.25" height="0.7" position="0 0.35 0" material="color: #26394c"></a-cylinder>
-      <a-sphere radius="0.57" position="0 1.55 0" material="color: #47d8ff; opacity: 0.8"></a-sphere>
+      <a-sphere radius="0.57" position="0 1.55 0" material="color: #47d8ff; opacity: 0.8"
+                animation="property: position; to: 0 1.8 0; dur: 1500; dir: alternate; loop: true"></a-sphere>
     </a-entity>
-
-    <a-box id="tank" width="1.25" height="1.25" depth="1.25" position="-10 0.65 -10" material="color: #5b4538" focusing></a-box>
 
     <a-entity position="6 0 -6" rotation="0 -28 0">
       <a-box width="3.4" height="2.4" depth="1" position="0 1.2 0" material="color: #192536"></a-box>
       <a-box id="keypad" width="1" height="0.8" depth="0.12" position="0 1.2 0.55" material="color: #ff5268" focusing>
-        <a-text id="keypad-text" value="LOCKED" align="center" position="0 0 0.1" color="#ffffff" width="3"></a-text>
+        <a-text id="keypad-text" value="NO POWER" align="center" position="0 0 0.1" color="#ffffff" width="3"></a-text>
       </a-box>
     </a-entity>
 
@@ -117,5 +132,39 @@
     </a-camera>
 
   </a-scene>
+
+  <script>
+    var scene = document.getElementById('s1');
+    
+    for (var i = 0; i < 6; i++) {
+      var crate = document.createElement('a-box');
+      var x = Math.random() * 20 - 10;
+      var z = Math.random() * 20 - 10;
+      var r = Math.random() * 90;
+      
+      crate.setAttribute('width', '2');
+      crate.setAttribute('height', '2');
+      crate.setAttribute('depth', '2');
+      crate.setAttribute('position', x + ' 1 ' + z);
+      crate.setAttribute('rotation', '0 ' + r + ' 0');
+      crate.setAttribute('material', 'color: #263649');
+      scene.appendChild(crate);
+    }
+
+    for (var j = 0; j < 3; j++) {
+      var tank = document.createElement('a-box');
+      var tx = Math.random() * 24 - 12;
+      var tz = Math.random() * 24 - 12;
+      
+      tank.setAttribute('class', 'tank');
+      tank.setAttribute('width', '1.2');
+      tank.setAttribute('height', '1.2');
+      tank.setAttribute('depth', '1.2');
+      tank.setAttribute('position', tx + ' 0.6 ' + tz);
+      tank.setAttribute('material', 'color: #5b4538');
+      tank.setAttribute('focusing', '');
+      scene.appendChild(tank);
+    }
+  </script>
 </body>
 </html>
