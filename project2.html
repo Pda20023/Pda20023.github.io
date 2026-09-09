@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+<head>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="multisync-component.js"></script>
+  <script src="https://gftruj.github.io/webzamples/aframe/controls/oculus-thumbstick-controls.js"></script>
+  
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD8i1okfrbGFd97AdrRbQp-arR0W2LwbBA",
+      authDomain: "dpda-vr.firebaseapp.com",
+      databaseURL: "https://dpda-vr-default-rtdb.firebaseio.com/",
+      projectId: "dpda-vr",
+      storageBucket: "dpda-vr.firebasestorage.app",
+      messagingSenderId: "531649853607",
+      appId: "1:531649853607:web:f6ec9e34d4c2e6a4fa8382"
+    };
+
+    AFRAME.registerComponent('sounding', {
+      tick: function () {
+        if (Math.random() < 0.99) return;
+        var sound = this.el.components.sound;
+        if (sound) sound.playSound();
+      }
+    });
+
+    AFRAME.registerComponent('flying', {
+      tick: function () {
+        if (Math.random() < 0.5) return;
+        var x = Math.random() * 100 - 50;
+        var y = Math.random() * 3 + 3;
+        var z = Math.random() * 100 - 50;
+        this.el.setAttribute('animation', 'property: position; to: ' + x + ' ' + y + ' ' + z);
+      }
+    });
+  </script>
+</head>
+<body>
+  <a-scene id="s1" background="color:#0d0928" fog="far: 300" shadow="type: pcfsoft" multisync>
+    
+    <a-assets>
+      <a-asset-item id="tree" src="tree.gltf"></a-asset-item>
+      <a-asset-item id="bird" src="bird.gltf"></a-asset-item>
+      <a-asset-item id="bee" src="bee.gltf"></a-asset-item>
+      <a-asset-item id="witch" src="witch.glb"></a-asset-item>
+      <audio id="hawk" src="Hawk Call 2x-SoundBible.com-1697796838.mp3"></audio>
+      <audio id="bzzz" src="Bee-SoundBible.com-914644763.mp3"></audio>
+    </a-assets>
+
+    <a-entity id="rig">
+      <a-camera position="0 3 0"></a-camera>
+      <a-entity oculus-touch-controls="hand: right" oculus-thumbstick-controls></a-entity>
+    </a-entity>
+
+    <a-sphere radius="500" position="0 5000 0" material="fog: false"></a-sphere>
+    <a-entity position="0 250 0" light="type: directional; intensity: 0.5; castShadow: true; shadowCameraBottom: -500; shadowCameraTop: 500; shadowCameraLeft: -500; shadowCameraRight: 500"></a-entity>
+    <a-light type="ambient" intensity="0.25"></a-light>
+    <a-plane color="#2a1c0e" height="1000" width="1000" rotation="-90 0 0" metalness="0" shadow></a-plane>
+
+    <a-entity gltf-model="#bird" scale="5 5 5" shadow="receive: false" sound="src: #hawk; poolSize: 2" sounding animation="property: position; from: -50 50 -500; to: 50 50 500; dur: 25000; loop: true" animation-mixer></a-entity>
+    <a-entity gltf-model="#bird" scale="5 5 5" rotation="0 180 0" shadow="receive: false" sound="src: #hawk; poolSize: 2" sounding animation="property: position; from: 50 50 500; to: 50 50 -500; dur: 33000; loop: true" animation-mixer></a-entity>
+
+  </a-scene>
+
+  <script>
+    var scene1 = document.getElementById('s1');
+    
+    for (var i = 0; i < 500; i++) {
+      var tree = document.createElement('a-entity');
+      var x = Math.random() * 800 - 400;
+      var z = Math.random() * 800 - 400;
+      var s = Math.random() * 15 + 5;
+      var r = Math.random() * 180 - 90;
+      
+      tree.setAttribute('gltf-model', '#tree');
+      tree.setAttribute('position', x + ' 0 ' + z);
+      tree.setAttribute('scale', s + ' ' + s + ' ' + s);
+      tree.setAttribute('rotation', '0 ' + r + ' 0');
+      tree.setAttribute('shadow', 'receive: false');
+      scene1.appendChild(tree);
+    Ορίστε ο κώδικας για το δεύτερο πρότζεκτ (το δάσος με τα ζώα, τον ήχο, την κίνηση και το multiplayer), συνθέτοντας όλα τα αντίστοιχα αρχεία σε ένα λειτουργικό σύνολο. 
+
+Όπως ζήτησες, έχουν αφαιρεθεί εντελώς όλα τα σχόλια από τον κώδικα:
+
+```html
+<!doctype html>
+<html>
+<head>
+  <script src="[https://aframe.io/releases/1.6.0/aframe.min.js](https://aframe.io/releases/1.6.0/aframe.min.js)"></script>
+  <script src="[https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js](https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js](https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js)"></script>
+  <script src="[https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js](https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js)"></script>
+  <script src="multisync-component.js"></script>
+  <script src="[https://gftruj.github.io/webzamples/aframe/controls/oculus-thumbstick-controls.js](https://gftruj.github.io/webzamples/aframe/controls/oculus-thumbstick-controls.js)"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD8i1okfrbGFd97AdrRbQp-arR0W2LwbBA",
+      authDomain: "dpda-vr.firebaseapp.com",
+      databaseURL: "[https://dpda-vr-default-rtdb.firebaseio.com/](https://dpda-vr-default-rtdb.firebaseio.com/)",
+      projectId: "dpda-vr",
+      storageBucket: "dpda-vr.firebasestorage.app",
+      messagingSenderId: "531649853607",
+      appId: "1:531649853607:web:f6ec9e34d4c2e6a4fa8382"
+    };
+
+    AFRAME.registerComponent('sounding', {
+      tick: function () {
+        if (Math.random() < 0.99) return;
+        var sound = this.el.components.sound;
+        if (sound) sound.playSound();
+      }
+    });
+
+    AFRAME.registerComponent('flying', {
+      tick: function () {
+        if (Math.random() < 0.5) return;
+        var x = Math.random() * 100 - 50;
+        var y = Math.random() * 3 + 3;
+        var z = Math.random() * 100 - 50;
+        this.el.setAttribute('animation', 'property: position; to: ' + x + ' ' + y + ' ' + z);
+      }
+    });
+  </script>
+</head>
+<body>
+  <a-scene id="s1" background="color:#0d0928" fog="far: 300" shadow="type: pcfsoft" multisync>
+    <a-assets>
+      <a-asset-item id="tree" src="tree.gltf"></a-asset-item>
+      <a-asset-item id="bird" src="bird.gltf"></a-asset-item>
+      <a-asset-item id="bee" src="bee.gltf"></a-asset-item>
+      <a-asset-item id="witch" src="witch.glb"></a-asset-item>
+      <audio id="hawk" src="Hawk Call 2x-SoundBible.com-1697796838.mp3"></audio>
+      <audio id="bzzz" src="Bee-SoundBible.com-914644763.mp3"></audio>
+    </a-assets>
+
+    <a-sphere radius="500" position="0 5000 0" material="fog: false"></a-sphere>
+    <a-entity position="0 250 0" light="type: directional; intensity: 0.5; castShadow: true; shadowCameraBottom: 500; shadowCameraTop: 500; shadowCameraLeft: -500; shadowCameraRight: 500"></a-entity>
+    <a-light type="ambient" intensity="0.25"></a-light>
+    <a-plane color="#2a1c0e" height="1000" width="1000" rotation="-90 0 0" metalness="0" shadow></a-plane>
+
+    <a-entity id="rig">
+      <a-camera position="0 3 0"></a-camera>
+      <a-entity oculus-touch-controls="hand: right" oculus-thumbstick-controls></a-entity>
+    </a-entity>
+
+    <a-entity gltf-model="#bird" scale="5 5 5" shadow="receive: false" sound="src: #hawk; poolSize: 2" sounding animation="property: position; from: -50 50 -500; to: 50 50 500; dur: 25000; loop: true" animation-mixer></a-entity>
+    <a-entity gltf-model="#bird" scale="5 5 5" rotation="0 180 0" shadow="receive: false" sound="src: #hawk; poolSize: 2" sounding animation="property: position; from: 50 50 500; to: 50 50 -500; dur: 33000; loop: true" animation-mixer></a-entity>
+  </a-scene>
+
+  <script>
+    var scene1 = document.getElementById('s1');
+    for (var i = 0; i < 500; i++) {
+      var tree = document.createElement('a-entity');
+      var x = Math.random() * 800 - 400;
+      var z = Math.random() * 800 - 400;
+      var s = Math.random() * 15 + 5;
+      var r = Math.random() * 180 - 90;
+      tree.setAttribute('gltf-model', '#tree');
+      tree.setAttribute('position', x + ' 0 ' + z);
+      tree.setAttribute('scale', s + ' ' + s + ' ' + s);
+      tree.setAttribute('rotation', '0 ' + r + ' 0');
+      tree.setAttribute('shadow', 'receive: false');
+      scene1.appendChild(tree);
+    }
+
+    for (var j = 0; j < 10; j++) {
+      var bee = document.createElement('a-entity');
+      var bx = Math.random() * 10 - 5;
+      var by = Math.random() * 3 + 3;
+      var bz = Math.random() * 10 - 5;
+      var br = Math.random() * 180 - 90;
+      bee.setAttribute('gltf-model', '#bee');
+      bee.setAttribute('position', bx + ' ' + by + ' ' + bz);
+      bee.setAttribute('scale', '0.01 0.01 0.01');
+      bee.setAttribute('rotation', '0 ' + br + ' 0');
+      bee.setAttribute('sound', 'src:#bzzz; volume: 0.1; poolSize: 10');
+      bee.setAttribute('sounding', '');
+      bee.setAttribute('flying', '');
+      scene1.appendChild(bee);
+    }
+  </script>
+</body>
+</html>
